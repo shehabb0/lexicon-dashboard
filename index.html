@@ -112,7 +112,7 @@ const SETTINGS_KEY='lexicon_notion_browser_connection';
 let notionToken='', sourceId='';
 try {const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(saved?.token&&saved?.sourceId){notionToken=saved.token;sourceId=saved.sourceId}}catch(e){console.warn('Could not read saved connection')}
 const NOTION_API='https://api.notion.com/v1', NOTION_VERSION='2026-03-11';
-let historyId=null,historyDatabaseId=null,historySourceKey='',historyBusy=false,historyEvents=[];
+let historyId=null,historyDatabaseId=null,historySourceKey='',historyBusy=false,historyEvents=[],historyError='';
 const HISTORY_NAME='Lexicon Review History';
 function activeWords(){return list.filter(w=>!w.mastered&&!['Not Now','No Difficulty','Learned'].includes(w.difficulty))}
 function dueWords(){return activeWords().filter(w=>w.next&&w.next.getTime()<=Date.now())}
@@ -135,7 +135,7 @@ function renderActivity(){
  $('activity-sub').textContent=historyId?'Live activity recorded in Notion':'Review history has not been enabled';
  $('activity-range').textContent=historyId?'Last 7 days · Live':'Last 7 days';
  $('enable-history').hidden=!!historyId;
- $('track-help').textContent=historyId?'Records Mark Reviewed, Forgot It and Mastered actions in Lexicon. Notion-native buttons are not included.':'Create a review history inside your existing Notion database. Past activity cannot be reconstructed.';
+ $('track-help').textContent=historyError|| (historyId?'Records Mark Reviewed, Forgot It and Mastered actions in Lexicon. Notion-native buttons are not included.':'Create a review history inside your existing Notion database. Past activity cannot be reconstructed.');
 }
 function renderHeat(){
  const values=Array.from({length:84},(_,i)=>actionsOn(addDays(i-83)));
@@ -314,7 +314,7 @@ async function saveNewWord(e){
 
 
 async function locateReviewHistory(){
- if(historySourceKey!==sourceId){historySourceKey=sourceId;historyId=null;historyDatabaseId=null;historyEvents=[]}
+ if(historySourceKey!==sourceId){historySourceKey=sourceId;historyId=null;historyDatabaseId=null;historyEvents=[];historyError=''}
  const schema=await ensureSchema();
  const dbId=schema.parent?.database_id;
  if(!dbId)throw new Error('Unable to locate your vocabulary database.');
@@ -339,8 +339,8 @@ async function readReviewHistory(){
 async function syncHistory(){
  if(historyBusy||!notionToken||!sourceId)return;
  historyBusy=true;
- try{await locateReviewHistory();await readReviewHistory()}
- catch(e){console.warn('Unable to read review history',e);$('track-help').textContent='History could not be loaded: '+e.message}
+ try{await locateReviewHistory();await readReviewHistory();historyError=''}
+ catch(e){console.warn('Unable to read review history',e);historyError='History could not be loaded: '+e.message}
  finally{historyBusy=false;renderActivity();renderHeat()}
 }
 async function enableReviewHistory(){
@@ -356,8 +356,8 @@ async function enableReviewHistory(){
    if(!ds.id)throw new Error('Notion returned no new data source ID.');
    historyId=ds.id;
   }
-  await readReviewHistory();toast('Review History enabled in Notion ✓');
- }catch(e){console.warn('History setup failed',e);toast('Review history setup failed');$('track-help').textContent='Setup error: '+e.message}
+  await readReviewHistory();historyError='';toast('Review History enabled in Notion ✓');
+ }catch(e){console.warn('History setup failed',e);toast('Review history setup failed');historyError='Setup error: '+e.message}
  finally{button.disabled=false;button.textContent='＋ Enable history';renderActivity();renderHeat()}
 }
 async function recordHistoryAction(word,action){
@@ -401,7 +401,7 @@ async function act(mode){
   $('overlay').classList.remove('open');selectedId=null;
   if(historyId){try{await recordHistoryAction(word,action)}catch(e){logError=e.message;console.warn('Review saved, history logging failed',e)}}
   const ok=await loadWords(true);if(!ok){toast('Review saved, but refresh failed');return}
-  if(logError){toast('Review saved but history logging failed');$('track-help').textContent='Log error: '+logError}
+  if(logError){toast('Review saved but history logging failed');historyError='Log error: '+logError;renderActivity()}
   else toast(action==='master'?'Mastered in Notion ✦':action==='forgot'?'Reset to Class 1 in Notion ↶':'Review approved in Notion ✓');
  }catch(e){toast(updated?'Review saved, but follow-up failed':'Not saved: '+e.message)}
  finally{buttons.forEach(b=>b.disabled=false)}
