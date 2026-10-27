@@ -39,7 +39,7 @@
   <div class="sidebar-foot"><div class="mini-card"><span style="color:var(--mint);font-size:10px;font-weight:850;letter-spacing:1px">YOUR JOURNEY ✦</span><strong style="display:block;margin-top:7px">One word at a time.</strong><p>Consistency turns new words into a second language.</p><div class="track"><div class="fill" id="side-progress"></div></div></div><div class="sidebar-bottom">✦ Designed for curious minds</div></div>
 </aside>
 <main class="main" id="overview">
- <header class="topbar"><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong>Overview</strong></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn" id="import">↻ Refresh Notion</button><div class="avatar">LX</div></div></header>
+ <header class="topbar"><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong>Overview</strong></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <button class="import-btn" id="import">↻ Refresh Notion</button><div class="avatar">LX</div></div></header>
  <section class="hero"><div style="position:relative;z-index:2"><div class="section-eyebrow">YOUR PERSONAL LANGUAGE STUDIO <span class="sample" id="sampleflag">NOT CONNECTED</span></div><h1>Make every word <em>stick.</em></h1><p>A calmer, smarter place to see your progress, catch up on reviews, and turn little moments of study into lasting knowledge.</p><button class="primary" id="start">Start today's review <span>→</span></button></div><div class="hero-art"><div class="orb"><div class="core">Aa</div><span class="sat"></span><span class="sat b"></span></div></div></section>
  <section class="metrics" aria-label="Vocabulary statistics">
   <article class="metric"><div class="metric-top"><span>Total vocabulary</span><span class="metric-icon"><svg><use href="#i-book"/></svg></span></div><div class="metric-num" id="total">0</div><div class="metric-note">Words in your collection</div></article>
@@ -60,13 +60,18 @@
 </main></div>
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="Vocabulary flashcard"><div class="flash"><button class="close" id="close" aria-label="Close">×</button><div class="flash-label" id="flash-label">FRENCH · CLASS 1</div><h3 id="flash-word">Bonjour</h3><div id="flash-answer" class="translation hidden">Good morning</div><div id="flash-example" class="example"></div><button id="flip" class="toggle">Reveal translation</button><div class="flashrow"><button class="modalbutton danger" id="forgot">↶ Forgot it</button><button class="modalbutton green" id="remembered">✓ Mark reviewed</button><button class="modalbutton purple" id="master-word">✦ Mastered</button></div><div class="modal-note">These actions update your actual Notion word. Use carefully.</div></div></div>
 <div class="toast" id="toast"></div>
-<div class="overlay open" id="login-screen" style="z-index:30"><form class="flash" id="login-form" style="max-width:430px" autocomplete="on">
-  <div class="flash-label">CONNECT LEXICON TO NOTION</div>
-  <h3 style="font-size:26px;margin:20px 0 12px">Your private dashboard</h3>
-  <p style="font-size:12px;color:#91a6c1;line-height:1.6;margin-bottom:20px">Enter the dashboard password you set on your hosting service. Your Notion token remains on the server, never in this page.</p>
-  <input id="dashboard-pass" type="password" placeholder="Dashboard password" autocomplete="current-password" required style="background:#0c172a;border:1px solid #41546c;border-radius:11px;color:#fff;width:100%;padding:12px 15px;outline:none;margin-bottom:12px"/>
+<div class="overlay open" id="login-screen" style="z-index:30"><form class="flash" id="login-form" style="max-width:475px" autocomplete="off">
+  <div class="flash-label">CONNECT LEXICON DIRECTLY TO NOTION</div>
+  <h3 style="font-size:26px;margin:20px 0 12px">Your Notion vocabulary, live.</h3>
+  <p style="font-size:12px;color:#91a6c1;line-height:1.6;margin-bottom:18px">No server needed. Enter your Notion integration token and the vocabulary <strong>Data Source ID</strong>. This personal dashboard calls Notion directly from your browser.</p>
+  <label for="notion-source" style="display:block;text-align:left;font-size:11px;color:#bfd1e5;margin:0 0 5px">Data Source ID</label>
+  <input id="notion-source" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" spellcheck="false" required style="background:#0c172a;border:1px solid #41546c;border-radius:11px;color:#fff;width:100%;padding:12px 15px;outline:none;margin-bottom:12px" />
+  <label for="notion-token" style="display:block;text-align:left;font-size:11px;color:#bfd1e5;margin:0 0 5px">Notion integration token</label>
+  <input id="notion-token" type="password" placeholder="Paste your Notion secret here" autocomplete="off" spellcheck="false" required style="background:#0c172a;border:1px solid #41546c;border-radius:11px;color:#fff;width:100%;padding:12px 15px;outline:none;margin-bottom:14px" />
+  <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#8fa3c0;cursor:pointer;text-align:left;margin-bottom:17px"><input id="remember-connection" type="checkbox" style="accent-color:#7cf4c5" /> Remember connection on this browser (stores token in browser storage)</label>
   <button class="modalbutton green" id="connect" type="submit" style="width:100%">Connect to Notion →</button>
-  <p id="login-error" style="color:#ff9eae;font-size:11px;margin-top:14px;min-height:14px"></p>
+  <p id="login-error" style="color:#ff9eae;font-size:11px;margin-top:14px;min-height:14px;overflow-wrap:anywhere"></p>
+  <p style="color:#677e9d;font-size:10px;margin:8px 0 0;line-height:1.6">Anyone who gets your token can act within its Notion permissions. Don't add the token to GitHub or your HTML source.</p>
 </form></div>
 <script>
 (function(){
@@ -80,7 +85,10 @@ const dayDiff=d=>Math.round((startOfDay(d).getTime()-startOfDay(new Date()).getT
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let list=[], filter='due',lang='All',search='',selectedId=null,imported=true;
-let dashboardPassword=sessionStorage.getItem('lexicon_password') || '';
+const SETTINGS_KEY='lexicon_notion_browser_connection';
+let notionToken='', sourceId='';
+try {const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(saved?.token&&saved?.sourceId){notionToken=saved.token;sourceId=saved.sourceId}}catch(e){console.warn('Could not read saved connection')}
+const NOTION_API='https://api.notion.com/v1', NOTION_VERSION='2026-03-11';
 let reviewsToday=0;
 const demoActivity=[4,7,3,8,12,6,10],demoHeat=Array.from({length:84},(_,i)=>{let x=(i*13+Math.floor(i/7)*7)%11;return x<3?0:x<5?1:x<8?2:x<10?3:4});
 function activeWords(){return list.filter(w=>!w.mastered&&!['Not Now','No Difficulty','Learned'].includes(w.difficulty))}
@@ -98,16 +106,82 @@ function renderActivity(){const arr=imported?[0,0,0,0,0,0,reviewsToday]:demoActi
 function renderHeat(){const values=imported?Array(84).fill(0):[...demoHeat];if(reviewsToday)values[83]=Math.min(4,Math.max(1,values[83]+reviewsToday));$('heatmap').innerHTML=values.map((n,i)=>`<div class="heatcell ${n?'l'+n:''}" title="${n?`${n} illustrative review(s)`:'No activity data'}"></div>`).join('');$('heat-sub').textContent=imported?'Only actions from this session are shown':'Illustrative study calendar';$('streakline').textContent=imported?'Notion has no historical review log':'Demo activity';}
 function openWord(id){const w=list.find(x=>x.id===id);if(!w)return;selectedId=id;$('flash-label').textContent=w.lang.toUpperCase()+' · CLASS '+w.klass;$('flash-word').textContent=w.word;$('flash-answer').textContent=w.meaning;$('flash-example').textContent=w.example||'';$('flash-answer').classList.add('hidden');$('flip').textContent='Reveal translation';$('overlay').classList.add('open');}
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2600)}
-async function api(path, options={}) {
- const response=await fetch(path,{...options,cache:'no-store',headers:{'Content-Type':'application/json','X-Dashboard-Key':dashboardPassword,...(options.headers||{})}});
- const data=await response.json().catch(()=>({error:'No response from server'}));
- if(!response.ok) {const err=new Error(data.error||`Request failed (${response.status})`);err.status=response.status;throw err;}
- return data;
+function textFromRich(rich){return Array.isArray(rich)?rich.map(x=>x.plain_text||x.text?.content||'').join(''):''}
+function propertyText(prop){
+ if(!prop)return '';
+ switch(prop.type){
+  case 'title':return textFromRich(prop.title);
+  case 'rich_text':return textFromRich(prop.rich_text);
+  case 'select':return prop.select?.name||'';
+  case 'status':return prop.status?.name||'';
+  case 'multi_select':return (prop.multi_select||[]).map(x=>x.name).join(', ');
+  case 'formula':{const f=prop.formula||{};return f.type==='string'?(f.string||''):f.type==='number'?(f.number==null?'':String(f.number)):f.type==='date'?(f.date?.start||''):f.type==='boolean'?String(f.boolean):''}
+  case 'number':return prop.number==null?'':String(prop.number);
+  case 'date':return prop.date?.start||'';
+  case 'checkbox':return String(!!prop.checkbox);
+  default:return '';
+ }
+}
+function propByCandidates(props,candidates){
+ const entries=Object.entries(props);
+ for(const phrase of candidates){const exact=entries.find(([k])=>k.toLowerCase()===phrase.toLowerCase());if(exact)return exact[1]}
+ for(const phrase of candidates){const similar=entries.find(([k])=>k.toLowerCase().includes(phrase.toLowerCase()));if(similar)return similar[1]}
+ return null;
+}
+function mapPage(page){
+ const p=page.properties||{};
+ const title=Object.entries(p).find(([,v])=>v.type==='title');
+ const word=title?propertyText(title[1]):'';
+ const meaning=propertyText(propByCandidates(p,['Write Translation','Translation','Meaning','English','Definition','Answer']));
+ const difficulty=propertyText(p.Difficulty);
+ const klass=Number(propertyText(p.Class))||1;
+ return {id:page.id,word,meaning,lang:propertyText(propByCandidates(p,['Language','Lang','Languages']))||'Other',
+  klass:Math.max(1,Math.min(10,klass)),next:propertyText(p['Next Review'])||null,
+  difficulty,mastered:difficulty==='Learned',approvedReviews:Number(p['Approved Reviews']?.number||0),
+  example:propertyText(propByCandidates(p,['Example','Example Sentence','Sentence'])),url:page.url||''};
+}
+async function notion(method,path,body){
+ if(!notionToken||!sourceId)throw new Error('Enter your token and Data Source ID first.');
+ const response=await fetch(NOTION_API+path,{
+  method,cache:'no-store',
+  headers:{'Authorization':'Bearer '+notionToken,'Notion-Version':NOTION_VERSION,'Content-Type':'application/json'},
+  body:body===undefined?undefined:JSON.stringify(body)
+ });
+ const result=await response.json().catch(()=>({message:'Unable to read Notion response'}));
+ if(!response.ok){const err=new Error(result.message||'Notion request failed ('+response.status+')');err.status=response.status;throw err}
+ return result;
+}
+async function getAllWords(){
+ const words=[];let cursor=null;
+ do{
+  const body={page_size:100};if(cursor)body.start_cursor=cursor;
+  const result=await notion('POST','/data_sources/'+encodeURIComponent(sourceId)+'/query',body);
+  words.push(...(result.results||[]).filter(p=>p.object==='page').map(mapPage));
+  if(words.length>10000)throw new Error('More than 10,000 words; please narrow your query.');
+  cursor=result.has_more?result.next_cursor:null;
+ }while(cursor);
+ return words.filter(w=>w.word);
+}
+async function updateWord(pageId,action){
+ if(!/^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(pageId))throw new Error('Invalid word ID');
+ const page=await notion('GET','/pages/'+encodeURIComponent(pageId));
+ const p=page.properties||{},props={};
+ if(action==='master'){
+  if(p.Difficulty?.type!=='select')throw new Error('Difficulty must be a Select property.');
+  props.Difficulty={select:{name:'Learned'}};
+ }else{
+  if(p['Approved Reviews']?.type!=='number'||p['Last Reviewed']?.type!=='date')throw new Error('Approved Reviews must be Number and Last Reviewed must be Date.');
+  if(p.Difficulty?.select?.name==='Learned')throw new Error('Change Difficulty from Learned to a normal level in Notion first.');
+  const old=Number(p['Approved Reviews'].number||0);
+  props['Approved Reviews']={number:action==='forgot'?0:Math.min(9,old+1)};
+  props['Last Reviewed']={date:{start:new Date().toISOString()}};
+ }
+ return mapPage(await notion('PATCH','/pages/'+encodeURIComponent(pageId),{properties:props}));
 }
 async function loadWords(silent=false){
  try {
-  const response=await api('/api/words');
-  list=response.words.map(w=>({...w, next:parseDate(w.next)}));
+  const words=await getAllWords();
+  list=words.map(w=>({...w,next:parseDate(w.next)}));
   $('sampleflag').textContent='LIVE · NOTION CONNECTED';
   $('login-screen').classList.remove('open');
   $('login-error').textContent='';
@@ -115,7 +189,7 @@ async function loadWords(silent=false){
   if(!silent)toast(`Synced ${list.length} words from Notion ✓`);
   return true;
  } catch(err) {
-  if(err.status===401){sessionStorage.removeItem('lexicon_password');$('login-screen').classList.add('open');}
+  if(err.status===401||err.status===403)$('login-screen').classList.add('open');
   $('login-error').textContent=err.message;
   if(silent)console.warn('Notion sync:',err.message);
   else toast('Sync failed: '+err.message);
@@ -128,7 +202,7 @@ async function act(mode){
  const buttons=['forgot','remembered','master-word'].map($);
  buttons.forEach(b=>b.disabled=true);
  try {
-  await api('/api/review',{method:'POST',body:JSON.stringify({pageId:word.id,action})});
+  await updateWord(word.id,action);
   $('overlay').classList.remove('open');selectedId=null;
   if(action!=='master')reviewsToday++;
   const refreshed=await loadWords(true);
@@ -140,6 +214,7 @@ async function act(mode){
 function parseDate(s){if(!s)return null;const d=new Date(String(s));return Number.isNaN(d.getTime())?null:d}
 $('date-label').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
 $('import').onclick=()=>loadWords();
+$('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('login-error').textContent='';$('login-screen').classList.add('open')};
 $('start').onclick=()=>{const due=dueWords().sort((a,b)=>a.next-b.next);if(due.length)openWord(due[0].id);else toast('You are all caught up! ✦')};
 $('flip').onclick=()=>{const a=$('flash-answer');a.classList.toggle('hidden');$('flip').textContent=a.classList.contains('hidden')?'Reveal translation':'Hide translation'};
 $('close').onclick=()=>$('overlay').classList.remove('open');$('overlay').onclick=e=>{if(e.target===$('overlay'))$('overlay').classList.remove('open')};document.addEventListener('keydown',e=>{if(e.key==='Escape')$('overlay').classList.remove('open')});
@@ -147,16 +222,28 @@ $('forgot').onclick=()=>act('forgot');$('remembered').onclick=()=>act('remember'
 $('search').oninput=e=>{search=e.target.value.toLowerCase().trim();render()};document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()});document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;document.querySelectorAll('[data-lang]').forEach(x=>x.classList.toggle('selected',x===b));render()});
  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-nav]').forEach(x=>x.classList.toggle('active',x===b));const n=b.dataset.nav;if(n==='mastered'){filter='mastered';document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x.dataset.filter==='mastered'));render();$('queue').scrollIntoView({behavior:'smooth'})}else if(n==='queue'){$('queue').scrollIntoView({behavior:'smooth'})}else $(n).scrollIntoView({behavior:'smooth'})});
  $('login-form').onsubmit=async e=>{
- e.preventDefault();dashboardPassword=$('dashboard-pass').value;
- $('connect').disabled=true;$('login-error').textContent='Connecting…';
- const ok=await loadWords(true);
- if(ok){sessionStorage.setItem('lexicon_password',dashboardPassword);toast('Connected to your Notion database ✓')}
- $('connect').disabled=false;
-};
-if(dashboardPassword)loadWords(true);
+  e.preventDefault();
+  sourceId=$('notion-source').value.trim();
+  notionToken=$('notion-token').value.trim();
+  $('connect').disabled=true;$('login-error').textContent='Connecting to Notion…';
+  const ok=await loadWords(true);
+  if(ok){
+   try{
+    if($('remember-connection').checked)localStorage.setItem(SETTINGS_KEY,JSON.stringify({sourceId,token:notionToken}));
+    else localStorage.removeItem(SETTINGS_KEY);
+   }catch(e){toast('Could not save your connection on this browser')}
+   toast('Connected to your Notion database ✓');
+  }
+  $('connect').disabled=false;
+ };
+$('notion-source').value=sourceId;
+$('notion-token').value=notionToken;
+$('remember-connection').checked=!!notionToken;
+if(notionToken&&sourceId)loadWords(true);
 else $('login-screen').classList.add('open');
 render();
-setInterval(()=>{if(dashboardPassword&&document.visibilityState==='visible')loadWords(true)},60000);
+render();
+setInterval(()=>{if(notionToken&&sourceId&&document.visibilityState==='visible')loadWords(true)},60000);
 })();
 </script>
 </body>
