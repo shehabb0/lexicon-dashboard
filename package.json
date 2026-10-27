@@ -1,0 +1,8 @@
+{
+  "name": "lexicon-notion-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Private vocabulary dashboard that reads and updates an existing Notion data source",
+  "scripts": {"start": "node server.js"},
+  "engines": {"node": ">=20"}
+}
