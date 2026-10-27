@@ -242,7 +242,6 @@ $('remember-connection').checked=!!notionToken;
 if(notionToken&&sourceId)loadWords(true);
 else $('login-screen').classList.add('open');
 render();
-render();
 setInterval(()=>{if(notionToken&&sourceId&&document.visibilityState==='visible')loadWords(true)},60000);
 })();
 </script>
