@@ -87,7 +87,7 @@
   <div class="month-connection month-panel" id="month-connection">
    <div class="month-connection-title">🗓️ Connect your monthly tracker</div>
    <p>Use the same Notion integration already connected to Lexicon. Paste the link to your <strong>Italian Tracker</strong> page once; this link stays in your browser, not in the public website code.</p>
-   <form id="month-connect-form" class="month-connect-form"><input type="text" id="month-root-input" autocomplete="off" spellcheck="false" placeholder="Paste your Italian Tracker Notion page link…" required aria-label="Notion monthly tracker page link"/><button type="submit" class="primary" id="month-connect-button">Connect monthly tracker</button></form>
+   <form id="month-connect-form" class="month-connect-form"><input type="text" id="month-root-input" autocomplete="off" spellcheck="false" placeholder="Paste your Italian Tracker Notion page link…" required aria-label="Notion monthly tracker page link"/><button type="submit" class="primary" id="month-connect-button">Connect monthly tracker</button><button type="button" class="ghostbtn" id="month-cancel-connection" hidden>Cancel</button></form>
    <p class="month-helper">Share the Italian Tracker page and its monthly databases with the same Notion integration used for vocabulary. You may also paste an individual monthly page link.</p>
    <div id="month-connect-error" class="month-error" role="status"></div>
   </div>
@@ -1417,6 +1417,7 @@ function showWorkspace(area='vocabulary',target='overview'){
  }
 }
 function showMonthError(message){
+ $('month-cancel-connection').hidden=!monthState;
  $('month-connect-error').textContent=message;
  $('month-connection').hidden=false;
  $('month-data').hidden=true;
@@ -1477,6 +1478,7 @@ function extractMonthResults(blocks){
 async function loadAvailableMonths(preferredId=''){
  const id=monthRootId;if(!id){showMonthError('Paste the Notion page link above to connect your tracker.');return}
  const request=++monthRequest;monthLoading=true;
+ $('month-connect-button').disabled=true;
  $('month-loading').hidden=false;$('month-connection').hidden=true;$('month-data').hidden=true;
  $('month-connect-error').textContent='';
  $('month-root-input').value=id;
@@ -1502,7 +1504,7 @@ async function loadAvailableMonths(preferredId=''){
   if(request!==monthRequest)return;
   console.warn('Monthly tracker connection failed',err);
   showMonthError('Notion could not open this tracker: '+err.message+' Make sure the page and its database are shared with your Lexicon integration.');
- }finally{if(request===monthRequest){monthLoading=false;$('month-loading').hidden=true}}
+ }finally{if(request===monthRequest){monthLoading=false;$('month-loading').hidden=true;$('month-connect-button').disabled=false}}
 }
 async function loadMonthPage(id,externalRequest=null){
  const req=externalRequest===null?++monthRequest:externalRequest;
@@ -1653,11 +1655,13 @@ $('month-connect-form').addEventListener('submit',async event=>{
  await loadAvailableMonths();
 });
 $('month-edit-connection').onclick=()=>{
+ $('month-cancel-connection').hidden=!monthState;
  $('month-connection').hidden=false;
  $('month-root-input').value=monthRootId;
  $('month-data').hidden=true;
  $('month-connect-error').textContent='';
 };
+$('month-cancel-connection').onclick=()=>{if(monthState){$('month-connection').hidden=true;$('month-data').hidden=false;$('month-connect-error').textContent=''}};
 $('month-refresh').onclick=()=>monthRootId?loadAvailableMonths(monthState?.id):$('month-connection').hidden=false;
 $('month-picker').onchange=()=>loadMonthPage($('month-picker').value);
 $('month-add-goal-form').addEventListener('submit',addMonthGoal);
