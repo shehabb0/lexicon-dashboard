@@ -51,6 +51,20 @@
 .reverse-switch[aria-pressed="true"]{background:#4f447f;border-color:#b7a3ff;color:#fff;box-shadow:0 0 0 1px #a99cff22}
 .reverse-switch:hover{background:#3a335b;color:#fff}
 @media(max-width:920px){.topright{flex-wrap:wrap;justify-content:flex-end}.reverse-switch{padding:10px 12px}}
+/* Compact vocabulary-table exercises, with the prompt beside a smaller input. */
+.grammar-modal.word-table-compact .conjugation-desc{margin-bottom:12px}
+.grammar-modal.word-table-compact .grammar-tabs{margin:10px 0 13px;padding-bottom:9px}
+.grammar-modal.word-table-compact .grammar-selects{gap:10px;margin-bottom:9px}
+.grammar-modal.word-table-compact .grammar-selects select{padding:8px 10px;font-size:11px}
+.grammar-modal.word-table-compact .grammar-question{padding:9px 12px;margin:7px 0;border-radius:9px}
+.grammar-modal.word-table-compact .grammar-question-title{font-size:9px;margin-bottom:4px}
+.grammar-modal.word-table-compact .table-practice-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.9fr);column-gap:14px;align-items:center}
+.grammar-modal.word-table-compact .table-practice-clues,.grammar-modal.word-table-compact .table-practice-response{min-width:0}
+.grammar-modal.word-table-compact .grammar-prompt{font-size:11px;line-height:1.4;margin:2px 0}
+.grammar-modal.word-table-compact .grammar-question label{margin:0 0 4px;font-size:10px}
+.grammar-modal.word-table-compact .grammar-question .practice-answer{padding:7px 10px;min-height:34px;font-size:12px;border-radius:7px}
+.grammar-modal.word-table-compact .grammar-feedback{font-size:10px;margin-top:3px}
+@media(max-width:600px){.grammar-modal.word-table-compact .table-practice-row{grid-template-columns:1fr;row-gap:6px}.grammar-modal.word-table-compact .grammar-question{padding:9px 10px}}
 </style>
 </head>
 <body>
@@ -196,7 +210,7 @@
 <div class="conjugation-footer"><button type="button" class="practice-switch" id="switch-conjugation-practice">✍ Practice this verb</button><button class="modalbutton" id="conjugation-refresh" type="button">↻ Refresh tables</button><a id="conjugation-notion-link" href="#" target="_blank" rel="noopener noreferrer">Open in Notion ↗</a></div>
 </div></div>
 <div class="overlay" id="grammar-overlay" role="dialog" aria-modal="true" aria-labelledby="grammar-title" style="z-index:21">
-<div class="flash conjugation-modal grammar-modal">
+<div class="flash conjugation-modal grammar-modal" id="grammar-modal">
  <button class="close" id="grammar-close" type="button" aria-label="Close grammar lesson">×</button>
  <div class="flash-label" id="grammar-studio-label">YOUR GRAMMAR STUDIO · NOTION</div>
  <h3 id="grammar-title">Grammar lesson</h3>
@@ -1289,17 +1303,19 @@ function renderGrammarQuestions(){
     ?'<p class="conjugation-hint">No practiceable table was found on this word’s Notion page. Add a simple table block inside the page, then click Refresh lesson below.</p>'
     :'<p class="conjugation-hint">No practiceable tables were found in this lesson. Try Read Lesson or Recall Rules instead.</p>';
    return;
-  }
+ }
  const target=Number($('grammar-column-select').value);
  const header=table.header?table.rows[0]:[];
  const rows=table.rows.slice(table.header?1:0);
  const questions=rows.map((cells,index)=>({cells,index})).filter(x=>String(x.cells[target]||'').trim()).slice(0,40);
  if(!questions.length){area.innerHTML='<p class="conjugation-hint">Choose another column with example answers.</p>';return}
- // Display only other columns; never render answers to the selected column in the quiz.
+ const compactTable=isTableEntry(list.find(w=>w.id===grammarWordId));
+ // Always keep the selected answer column hidden until the user checks or reveals answers.
  area.innerHTML=questions.map(({cells,index})=>{
   const shown=cells.map((value,i)=>({value,i})).filter(c=>c.i!==target&&String(c.value||'').trim()).map(c=>'<p class="grammar-prompt"><strong>'+esc(String(header[c.i]||'Column '+(c.i+1)))+':</strong> '+esc(c.value)+'</p>').join('');
-  return '<div class="grammar-question" data-row="'+index+'"><div class="grammar-question-title">EXERCISE '+(index+1)+'</div>'+shown+
-    '<label for="grammar-answer-'+index+'">'+esc(String(header[target]||'Your answer'))+'</label><input id="grammar-answer-'+index+'" class="practice-answer grammar-answer" type="text" spellcheck="false" autocomplete="off" data-row="'+index+'" placeholder="Write your answer…" maxlength="2000"/><div class="grammar-feedback" id="grammar-feedback-'+index+'" aria-live="polite"></div></div>';
+  const answer='<label for="grammar-answer-'+index+'">'+esc(String(header[target]||'Your answer'))+'</label><input id="grammar-answer-'+index+'" class="practice-answer grammar-answer" type="text" spellcheck="false" autocomplete="off" data-row="'+index+'" placeholder="Write your answer…" maxlength="2000"/><div class="grammar-feedback" id="grammar-feedback-'+index+'" aria-live="polite"></div>';
+  const content=compactTable?'<div class="table-practice-row"><div class="table-practice-clues">'+shown+'</div><div class="table-practice-response">'+answer+'</div></div>':shown+answer;
+  return '<div class="grammar-question" data-row="'+index+'"><div class="grammar-question-title">EXERCISE '+(index+1)+'</div>'+content+'</div>';
  }).join('');
 }
 function grammarComparable(value){
@@ -1408,6 +1424,7 @@ async function showGrammar(wordId,force=false,requestedMode='read'){
  grammarWordId=wordId;
  const req=++grammarRequest;
  // Table words use the existing Notion table-practice engine, without changing grammar lessons.
+ $('grammar-modal').classList.toggle('word-table-compact',isWordTable);
  $('grammar-studio-label').textContent=isWordTable?'YOUR VOCABULARY TABLE · NOTION':'YOUR GRAMMAR STUDIO · NOTION';
  $('grammar-title').textContent=isWordTable?word.word+' · Table practice':word.word;
  $('grammar-read-tab').textContent=isWordTable?'📖 View original table':'📖 Read lesson';
