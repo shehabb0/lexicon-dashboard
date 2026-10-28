@@ -187,7 +187,64 @@ function renderHeat(){
  $('heat-sub').textContent=historyId?'Actual Notion review history':'Tracking is not enabled';
  $('streakline').textContent=historyId?values.filter(Boolean).length+' active days':'No history yet';
 }
-function openWord(id){const w=list.find(x=>x.id===id);if(!w)return;selectedId=id;$('flash-label').textContent=w.lang.toUpperCase()+' · CLASS '+w.klass;$('flash-word').textContent=w.word;$('flash-answer').textContent=w.meaning;$('flash-example').textContent=w.example||'';$('flash-answer').classList.add('hidden');$('flash-answer').setAttribute('aria-hidden','true');$('flash-example').classList.add('hidden');$('flash-example').setAttribute('aria-hidden','true');$('flip').textContent='Reveal translation';$('show-conjugation').hidden=typeKind(w.type)!=='verb';$('overlay').classList.add('open');}
+
+function normalizeAnswer(value){
+ return String(value||'').normalize('NFKC').toLowerCase().replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/[\u2018\u2019\u02BC]/g,"'").replace(/[.,!?;:…。，！？؛]/g,' ').replace(/\s+/g,' ').trim();
+}
+function withoutAccents(value){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function answerVariants(reference,kind='translation',prompt=''){
+ const values=String(reference||'').split(/\s*(?:[\n;]|\s\/\s|\s+or\s+)\s*/i).filter(Boolean);
+ const all=new Set([String(reference||'').trim(),...values]);
+ if(kind==='conjugation'){
+  const pronoun=normalizeAnswer(prompt).split(/\s+/)[0];
+  for(const form of [...all]){
+   const text=normalizeAnswer(form);
+   if(pronoun&&text.startsWith(pronoun+' '))all.add(form.trim().slice(pronoun.length).trim());
+   if(/^(io|tu|lui|lei|noi|voi|loro|je|j'|il|elle|nous|vous|ils|elles)\s+/i.test(form))all.add(form.replace(/^(io|tu|lui|lei|noi|voi|loro|je|j'|il|elle|nous|vous|ils|elles)\s+/i,'').trim());
+  }
+ }
+ return [...all].map(normalizeAnswer).filter(Boolean);
+}
+function typoDistance(a,b){
+ if(Math.abs(a.length-b.length)>2)return 99;
+ let row=Array.from({length:b.length+1},(_,i)=>i);
+ for(let i=1;i<=a.length;i++){
+  let previous=row[0];row[0]=i;
+  for(let j=1;j<=b.length;j++){const saved=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,previous+(a[i-1]===b[j-1]?0:1));previous=saved}
+ }
+ return row[b.length];
+}
+function evaluateAnswer(typed,expected,kind='translation',prompt=''){
+ const answer=normalizeAnswer(typed);
+ const variants=answerVariants(expected,kind,prompt);
+ if(!answer||!variants.length)return {state:'blank',expected};
+ if(variants.includes(answer))return {state:'correct',expected};
+ if(variants.some(v=>withoutAccents(v)===withoutAccents(answer)))return {state:'close',expected,reason:'Check the accents or spelling marks.'};
+ if(variants.some(v=>v.length>=5&&answer.length>=5&&typoDistance(v,answer)<=(v.length>=12?2:1)))return {state:'close',expected,reason:'Almost! Check the spelling.'};
+ return {state:'wrong',expected};
+}
+function resetTranslationPractice(word){
+ $('translation-attempt').value='';
+ $('translation-feedback').hidden=true;
+ $('translation-feedback').textContent='';
+ $('translation-feedback').className='quiz-feedback';
+ $('check-translation').disabled=!word?.meaning?.trim();
+ $('translation-attempt').disabled=!word?.meaning?.trim();
+ $('translation-attempt').placeholder=word?.meaning?.trim()?'Type the meaning…':'No translation found in Notion';
+}
+function checkTranslation(e){
+ e.preventDefault();
+ const word=list.find(w=>w.id===selectedId);if(!word)return;
+ const typed=$('translation-attempt').value.trim();
+ if(!typed){$('translation-attempt').focus();return}
+ const result=evaluateAnswer(typed,word.meaning,'translation');
+ const feedback=$('translation-feedback');feedback.hidden=false;
+ feedback.className='quiz-feedback '+(result.state==='correct'?'ok':result.state==='close'?'close':'wrong');
+ const success=result.state==='correct';
+ // Text content avoids inserting any user-controlled HTML.
+ feedback.textContent=success?'✓ Correct! Your translation matches Notion.':result.state==='close'?'△ Almost correct. '+result.reason+' Notion answer: '+word.meaning:'✕ Not quite. Notion answer: '+word.meaning;
+}
+function openWord(id){const w=list.find(x=>x.id===id);if(!w)return;selectedId=id;$('flash-label').textContent=w.lang.toUpperCase()+' · CLASS '+w.klass;$('flash-word').textContent=w.word;$('flash-answer').textContent=w.meaning;$('flash-example').textContent=w.example||'';$('flash-answer').classList.add('hidden');$('flash-answer').setAttribute('aria-hidden','true');$('flash-example').classList.add('hidden');$('flash-example').setAttribute('aria-hidden','true');$('flip').textContent='Reveal translation';resetTranslationPractice(w);$('show-conjugation').hidden=typeKind(w.type)!=='verb';$('practice-conjugation').hidden=typeKind(w.type)!=='verb';$('overlay').classList.add('open');}
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2600)}
 function textFromRich(rich){return Array.isArray(rich)?rich.map(x=>x.plain_text||x.text?.content||'').join(''):''}
 function propertyText(prop){
@@ -555,7 +612,10 @@ $('import').onclick=()=>loadWords();
  $('add-word-form').addEventListener('submit',saveNewWord);
 $('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('login-error').textContent='';$('login-screen').classList.add('open')};
 $('start').onclick=()=>{const due=dueWords().sort((a,b)=>a.next-b.next);if(due.length)openWord(due[0].id);else toast('You are all caught up! ✦')};
-$('show-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId)};
+$('translation-quiz-form').addEventListener('submit',checkTranslation);
+ $('clear-translation').onclick=()=>resetTranslationPractice(list.find(w=>w.id===selectedId));
+ $('translation-attempt').addEventListener('input',()=>{$('translation-feedback').hidden=true});
+ $('show-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId)};
  $('conjugation-close').onclick=closeConjugation;
  $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true)};
  $('conjugation-overlay').onclick=e=>{if(e.target===$('conjugation-overlay'))closeConjugation()};
