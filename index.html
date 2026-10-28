@@ -1283,7 +1283,13 @@ function renderGrammarQuestions(){
  resetGrammarReveal();
  $('grammar-check').disabled=!table;
  $('grammar-retry').disabled=!table;
- if(!table){area.innerHTML='<p class="conjugation-hint">No practiceable tables were found in this lesson. Try Read Lesson or Recall Rules instead.</p>';return}
+ if(!table){
+   const word=list.find(w=>w.id===grammarWordId);
+   area.innerHTML=isTableEntry(word)
+    ?'<p class="conjugation-hint">No practiceable table was found on this word’s Notion page. Add a simple table block inside the page, then click Refresh lesson below.</p>'
+    :'<p class="conjugation-hint">No practiceable tables were found in this lesson. Try Read Lesson or Recall Rules instead.</p>';
+   return;
+  }
  const target=Number($('grammar-column-select').value);
  const header=table.header?table.rows[0]:[];
  const rows=table.rows.slice(table.header?1:0);
@@ -1417,7 +1423,7 @@ async function showGrammar(wordId,force=false,requestedMode='read'){
  resetGrammarReveal();
  $('grammar-overlay').classList.add('open');
  $('grammar-refresh').disabled=true;
- setGrammarMode(isWordTable?'table':requestedMode==='table'?'table':'read');
+ setGrammarMode(isWordTable?(requestedMode==='read'?'read':'table'):(requestedMode==='table'?'table':'read'));
  try{
   const lesson=(!force&&grammarCache.has(wordId))?grammarCache.get(wordId):await readGrammarLesson(wordId);
   if(req!==grammarRequest||grammarWordId!==wordId)return;
