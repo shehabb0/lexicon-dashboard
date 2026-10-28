@@ -16,6 +16,7 @@
 @media(max-width:860px){.insights,.lowergrid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.main{padding:22px 22px 45px}.hero-art{display:none}.qrow{grid-template-columns:1.1fr 1fr 90px 65px}.qrow>*:nth-child(4){display:none}}
 @media(max-width:600px){.app{display:block}.sidebar{position:static;width:100%;height:auto;display:flex;flex-direction:row;align-items:center;gap:10px;padding:10px 13px}.brand{display:flex;gap:5px}.brand strong{display:block;font-size:16px}.sidebar .navlabel,.sidebar .sidebar-foot{display:none}.sidebar nav{display:flex;gap:4px;overflow:auto}.navlink{margin:0;padding:10px}.navlink.active:before{display:none}.topbar{margin-bottom:16px}.topright{gap:5px}.datepill{display:none}.main{padding:18px 13px 40px}.hero{padding:22px;min-height:auto}.hero h1{font-size:28px}.metric{min-height:115px;padding:15px}.metric-num{font-size:29px}.panel{padding:17px}.progress-content{gap:12px}.donut{width:120px;height:120px;flex-basis:120px}.donut:before{inset:13px}.queue-head{display:block}.controls{margin-top:10px}.qrow{grid-template-columns:1.1fr .75fr 80px;gap:7px;padding:13px 9px}.qrow>*:nth-child(3){display:none}.queue .meaning{max-width:110px}}
 .streak-metric{border-color:#f7a44d46;background:radial-gradient(ellipse at 100% 0%,#f6a34a1b,transparent 68%),linear-gradient(150deg,#172235,#101a2b)}.streak-metric .metric-icon{color:#ffb65b;background:#a86b303a}.streak-fire{font-size:20px;line-height:1}.streak-metric .streak-count{color:#ffd392;display:flex;align-items:baseline;gap:7px;white-space:nowrap}.streak-unit{font-size:12px;letter-spacing:0;font-weight:680;color:#c4a77e}.streak-metric.active{border-color:#e59b537d;box-shadow:0 0 28px #fb9c2e11}.streak-metric.active .streak-fire{filter:drop-shadow(0 0 7px #ffb45288)}.streak-metric .metric-note{line-height:1.5}.metrics{grid-template-columns:repeat(5,minmax(0,1fr))}@media(max-width:1270px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:860px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.streak-metric{grid-column:span 2}}@media(max-width:440px){.streak-metric .metric-num{font-size:32px}}
+.practice-review-footer{margin-top:21px;padding-top:18px;border-top:1px solid #33445b;justify-content:flex-start;align-items:center}.practice-review-footer .modalbutton.green{font-size:12px;padding:11px 18px}.practice-review-hint{font-size:11px;color:#91abc0;line-height:1.5;max-width:440px}.practice-review-footer button:disabled{opacity:.55;cursor:progress}
 </style>
 </head>
 <body>
@@ -94,7 +95,8 @@
     <div class="practice-footer"><button class="quiz-check" id="check-conjugation" type="submit">✓ Check conjugation</button><button class="quiz-secondary" id="retry-conjugation" type="button">Try again</button><button class="practice-switch" id="reveal-conjugation-answers" type="button" hidden aria-expanded="false">👁 Show correct answers</button></div>
     <div id="practice-summary" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
   </form>
-  <p class="practice-notice">Checked against your Notion table. Exercises don't change your Class or mark a review complete.</p>
+  <div class="practice-footer practice-review-footer"><button type="button" id="practice-mark-reviewed" class="modalbutton green">✓ Mark Reviewed</button><span class="practice-review-hint">Save this verb's review to Notion and continue to the next due item.</span></div>
+  <p class="practice-notice">Checking answers is practice only. Mark Reviewed saves your review and updates your Notion schedule.</p>
 </div>
 <div id="conjugation-content" aria-live="polite"><p class="conjugation-hint">Loading conjugation…</p></div>
 <div class="conjugation-footer"><button type="button" class="practice-switch" id="switch-conjugation-practice">✍ Practice this verb</button><button class="modalbutton" id="conjugation-refresh" type="button">↻ Refresh tables</button><a id="conjugation-notion-link" href="#" target="_blank" rel="noopener noreferrer">Open in Notion ↗</a></div>
@@ -1247,12 +1249,13 @@ async function loadWords(silent=false){
 async function act(mode){
  const word=list.find(w=>w.id===selectedId);if(!word)return;
  const action=mode==='master'?'master':mode==='forgot'?'forgot':'remember';
- const buttons=['forgot','remembered','master-word'].map($);
+ const buttons=['forgot','remembered','master-word','practice-mark-reviewed'].map($);
  buttons.forEach(b=>b.disabled=true);
  const isSessionReview=!!reviewSession&&reviewSession.pendingIds.includes(word.id);
  let updated=false,logError='';
  try{
   await updateWord(word.id,action);updated=true;
+  if(conjugationWordId===word.id&&$('conjugation-overlay').classList.contains('open'))closeConjugation();
   $('overlay').classList.remove('open');selectedId=null;
   if(historyId){try{await recordHistoryAction(word,action)}catch(e){logError=e.message;console.warn('Review saved, history logging failed',e)}}
   const ok=await loadWords(true);
@@ -1331,6 +1334,7 @@ $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('conjugation-practice-form').addEventListener('submit',gradeConjugation);
  $('retry-conjugation').onclick=resetConjugationPractice;
  $('reveal-conjugation-answers').onclick=revealConjugationAnswers;
+ $('practice-mark-reviewed').onclick=()=>{if(conjugationWordId&&conjugationWordId===selectedId)act('remember')};
  $('practice-fields').addEventListener('input',e=>{if(e.target.classList.contains('practice-answer'))clearPracticeGrades()});
  $('conjugation-close').onclick=closeConjugation;
  $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true,conjugationMode)};
