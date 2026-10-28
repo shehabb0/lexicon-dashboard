@@ -1,0 +1,19 @@
+{
+  "name": "Lexicon — Your Learning Space",
+  "short_name": "Lexicon",
+  "description": "Your personal Notion-connected learning space for vocabulary, grammar, reviews and monthly goals.",
+  "id": "/lexicon-dashboard/",
+  "start_url": "/lexicon-dashboard/",
+  "scope": "/lexicon-dashboard/",
+  "display": "standalone",
+  "background_color": "#080e1a",
+  "theme_color": "#0b1220",
+  "icons": [
+    {
+      "src": "./lexicon-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
