@@ -64,8 +64,9 @@
  <form id="translation-quiz-form">
   <label for="translation-attempt" class="practice-label">Your answer</label>
   <input id="translation-attempt" class="quiz-input" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Type your translation here…" maxlength="2000" aria-label="Type your translation"/>
-  <div class="quiz-row"><button type="submit" class="quiz-check" id="check-translation">✓ Check answer</button><button type="button" class="quiz-secondary" id="clear-translation">Try again</button></div>
+  <div class="quiz-row"><button type="submit" class="quiz-check" id="check-translation">✓ Check answer</button><button type="button" class="quiz-secondary" id="clear-translation">Try again</button><button type="button" class="practice-switch" id="reveal-translation-answer" hidden aria-expanded="false">👁 Show correct answer</button></div>
   <div id="translation-feedback" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
+  <div id="translation-correct-answer" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
  </form>
 </div><div class="flashrow"><button class="modalbutton danger" id="forgot">↶ Forgot it</button><button class="modalbutton green" id="remembered">✓ Mark reviewed</button><button class="modalbutton purple" id="master-word">✦ Mastered</button></div><div class="modal-note">These actions update your actual Notion word. Use carefully.</div></div></div>
 <div class="overlay" id="conjugation-overlay" role="dialog" aria-modal="true" aria-labelledby="conjugation-title" style="z-index:21">
@@ -257,21 +258,45 @@ function evaluateAnswer(typed,expected,kind='translation',prompt=''){
  if(variants.some(v=>v.length>=5&&answer.length>=5&&typoDistance(v,answer)<=(v.length>=12?2:1)))return {state:'close',expected,reason:'Check the spelling.'};
  return {state:'wrong',expected};
 }
+function hideTranslationAnswerReveal(){
+ const button=$('reveal-translation-answer');
+ button.hidden=true;
+ button.textContent='👁 Show correct answer';
+ button.setAttribute('aria-expanded','false');
+ $('translation-correct-answer').hidden=true;
+ $('translation-correct-answer').textContent='';
+}
+function resetTranslationFeedback(){
+ const feedback=$('translation-feedback');
+ feedback.hidden=true;feedback.textContent='';feedback.className='quiz-feedback';
+ hideTranslationAnswerReveal();
+}
 function resetTranslationPractice(word){
  $('translation-attempt').value='';
- $('translation-feedback').hidden=true;
- $('translation-feedback').textContent='';
- $('translation-feedback').className='quiz-feedback';
+ resetTranslationFeedback();
  $('check-translation').disabled=false;
  $('translation-attempt').disabled=false;
  $('translation-attempt').readOnly=false;
  $('translation-attempt').placeholder='Type your translation here…';
+}
+function toggleTranslationAnswer(){
+ const button=$('reveal-translation-answer');
+ if(button.hidden)return;
+ const word=list.find(w=>w.id===selectedId);
+ if(!word?.meaning?.trim())return;
+ const answer=$('translation-correct-answer');
+ const reveal=button.getAttribute('aria-expanded')!=='true';
+ answer.hidden=!reveal;
+ answer.textContent=reveal?'Notion answer: '+word.meaning:'';
+ button.setAttribute('aria-expanded',String(reveal));
+ button.textContent=reveal?'🙈 Hide correct answer':'👁 Show correct answer';
 }
 function checkTranslation(e){
  e.preventDefault();
  const word=list.find(w=>w.id===selectedId);if(!word)return;
  const typed=$('translation-attempt').value.trim();
  if(!typed){$('translation-attempt').focus();return}
+ resetTranslationFeedback();
  if(!word.meaning?.trim()){
   const fb=$('translation-feedback');
   fb.hidden=false;fb.className='quiz-feedback close';
@@ -281,9 +306,12 @@ function checkTranslation(e){
  const result=evaluateAnswer(typed,word.meaning,'translation');
  const feedback=$('translation-feedback');feedback.hidden=false;
  feedback.className='quiz-feedback '+(result.state==='correct'?'ok':result.state==='close'?'close':'wrong');
- const success=result.state==='correct';
- // Text content avoids inserting any user-controlled HTML.
- feedback.textContent=success?'✓ Correct! Your translation matches Notion.':result.state==='close'?'△ Almost there! '+result.reason+' Notion answer: '+word.meaning:'✕ Not quite. Notion answer: '+word.meaning;
+ if(result.state==='correct'){
+  feedback.textContent='✓ Correct! Your translation matches Notion.';
+ }else{
+  feedback.textContent=result.state==='close'?'△ Almost there! '+result.reason+' Try again or reveal the correct answer.':'✕ Not quite. Try again or reveal the correct answer.';
+  $('reveal-translation-answer').hidden=false;
+ }
 }
 function openWord(id){const w=list.find(x=>x.id===id);if(!w)return;selectedId=id;$('flash-label').textContent=w.lang.toUpperCase()+' · CLASS '+w.klass;$('flash-word').textContent=w.word;$('flash-answer').textContent=w.meaning;$('flash-example').textContent=w.example||'';$('flash-answer').classList.add('hidden');$('flash-answer').setAttribute('aria-hidden','true');$('flash-example').classList.add('hidden');$('flash-example').setAttribute('aria-hidden','true');$('flip').textContent='Reveal translation';resetTranslationPractice(w);$('show-conjugation').hidden=typeKind(w.type)!=='verb';$('practice-conjugation').hidden=typeKind(w.type)!=='verb';$('overlay').classList.add('open');}
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2600)}
@@ -844,8 +872,9 @@ $('import').onclick=()=>loadWords();
 $('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('login-error').textContent='';$('login-screen').classList.add('open')};
 $('start').onclick=()=>{const due=dueWords().sort((a,b)=>a.next-b.next);if(due.length)openWord(due[0].id);else toast('You are all caught up! ✦')};
 $('translation-quiz-form').addEventListener('submit',checkTranslation);
- $('clear-translation').onclick=()=>resetTranslationPractice(list.find(w=>w.id===selectedId));
- $('translation-attempt').addEventListener('input',()=>{$('translation-feedback').hidden=true});
+ $('clear-translation').onclick=()=>{resetTranslationPractice(list.find(w=>w.id===selectedId));$('translation-attempt').focus()};
+ $('reveal-translation-answer').onclick=toggleTranslationAnswer;
+ $('translation-attempt').addEventListener('input',resetTranslationFeedback);
  $('show-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId,false,'view')};
  $('practice-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId,false,'practice')};
  $('switch-conjugation-practice').onclick=()=>{setConjugationMode('practice');renderPracticeFields()};
