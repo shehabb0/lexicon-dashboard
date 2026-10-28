@@ -199,7 +199,8 @@ const dayDiff=d=>Math.round((startOfDay(d).getTime()-startOfDay(new Date()).getT
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let list=[], filter='due',lang='All',search='',selectedId=null,imported=true,queueLimit=24;
-let reviewSession=null;
+let reviewSession=null,reviewActionBusy=false;
+let reviewHistorySaveQueue=Promise.resolve();
 let conjugationWordId=null,conjugationRequest=0,conjugationMode='view',practiceExercises=[];
 const conjugationCache=new Map();
 let grammarWordId=null,grammarRequest=0,grammarMode='read',grammarLesson=null;
@@ -666,7 +667,7 @@ async function readReviewHistory(){
   const request={page_size:100,filter:{property:'Reviewed At',date:{on_or_after:iso(addDays(-83))}},sorts:[{property:'Reviewed At',direction:'descending'}]};
   if(cursor)request.start_cursor=cursor;
   const r=await notion('POST','/data_sources/'+encodeURIComponent(historyId)+'/query',request);
-  for(const page of r.results||[]){const when=page.properties?.['Reviewed At']?.date?.start||page.created_time;if(when&&!Number.isNaN(new Date(when).getTime()))entries.push({when})}
+  for(const page of r.results||[]){const when=page.properties?.['Reviewed At']?.date?.start||page.created_time;if(when&&!Number.isNaN(new Date(when).getTime()))entries.push({when,id:page.id})}
   cursor=r.has_more?r.next_cursor:null;
   if(entries.length>10000){cursor=null;console.warn('History limited to 10k results')}
  }while(cursor);
@@ -699,14 +700,34 @@ async function enableReviewHistory(){
 async function recordHistoryAction(word,action){
  if(!historyId)return;
  const label=action==='remember'?'Reviewed':action==='forgot'?'Forgot':'Mastered';
- await notion('POST','/pages',{parent:{type:'data_source_id',data_source_id:historyId},properties:{
+ const reviewedAt=new Date().toISOString();
+ const saved=await notion('POST','/pages',{parent:{type:'data_source_id',data_source_id:historyId},properties:{
   Review:{title:[{type:'text',text:{content:word.word.slice(0,2000)||'Word review'}}]},
-  'Reviewed At':{date:{start:new Date().toISOString()}},
+  'Reviewed At':{date:{start:reviewedAt}},
   Action:{select:{name:label}},
   'Word ID':{rich_text:[{type:'text',text:{content:word.id}}]},
   'Class Before':{number:word.klass}
  }});
- await readReviewHistory();
+ // The Notion event is confirmed. Update charts locally instead of refetching 84 days of history.
+ if(!saved?.id||!historyEvents.some(event=>event.id===saved.id)){
+  historyEvents.push({id:saved?.id||null,when:reviewedAt});
+ }
+ renderActivity();
+ renderHeat();
+}
+function enqueueReviewHistory(word,action){
+ if(!historyId)return;
+ reviewHistorySaveQueue=reviewHistorySaveQueue.catch(()=>{}).then(async()=>{
+  try{
+   await recordHistoryAction(word,action);
+   historyError='';
+  }catch(err){
+   historyError='Review saved, but the activity log failed: '+err.message;
+   console.warn('Notion review saved; history log could not be updated',err);
+   renderActivity();
+   toast('Review saved, but history logging failed. Check your Notion connection.');
+  }
+ });
 }
 
 async function retrieveChildren(blockId){
@@ -1247,50 +1268,52 @@ async function loadWords(silent=false){
  }
 }
 async function act(mode){
+ if(reviewActionBusy)return;
  const word=list.find(w=>w.id===selectedId);if(!word)return;
  const action=mode==='master'?'master':mode==='forgot'?'forgot':'remember';
  const buttons=['forgot','remembered','master-word','practice-mark-reviewed'].map($);
- buttons.forEach(b=>b.disabled=true);
+ reviewActionBusy=true;
+ buttons.forEach(button=>button.disabled=true);
  const isSessionReview=!!reviewSession&&reviewSession.pendingIds.includes(word.id);
- let updated=false,logError='';
  try{
-  await updateWord(word.id,action);updated=true;
-  if(conjugationWordId===word.id&&$('conjugation-overlay').classList.contains('open'))closeConjugation();
-  $('overlay').classList.remove('open');selectedId=null;
-  if(historyId){try{await recordHistoryAction(word,action)}catch(e){logError=e.message;console.warn('Review saved, history logging failed',e)}}
-  const ok=await loadWords(true);
-  if(!ok){
-   reviewSession=null;
-   toast('Review saved in Notion, but refresh failed. Start again to continue.');
-   return;
+  // Do not advance until Notion confirms the review has actually been saved.
+  const saved=await updateWord(word.id,action);
+  const position=list.findIndex(w=>w.id===word.id);
+  if(position>=0){
+   list[position]={...word,...saved,next:parseDate(saved.next)};
   }
-  if(logError){historyError='Log error: '+logError;renderActivity()}
+  if(conjugationWordId===word.id&&$('conjugation-overlay').classList.contains('open'))closeConjugation();
+  $('overlay').classList.remove('open');
+  selectedId=null;
+  enqueueReviewHistory(word,action);
   if(isSessionReview&&reviewSession){
-   const index=reviewSession.pendingIds.indexOf(word.id);
-   if(index>=0){
-    reviewSession.pendingIds.splice(index,1);
+   const position=reviewSession.pendingIds.indexOf(word.id);
+   if(position>=0){
+    reviewSession.pendingIds.splice(position,1);
     reviewSession.completed++;
    }
-   const remainingDue=new Set(dueWords().map(w=>w.id));
-   const nextId=reviewSession.pendingIds.find(id=>remainingDue.has(id));
+   // The next word is already in memory. No full Notion query is needed between cards.
+   const nextId=reviewSession.pendingIds.find(id=>list.some(w=>w.id===id));
    if(nextId){
     openWord(nextId,true);
-    if(logError)toast('Review saved; activity log failed. Next item ready.');
-    else toast(action==='forgot'?'Reset in Notion ↶ · Next item':action==='master'?'Mastered ✦ · Next item':'Saved ✓ · Next item');
+    toast(action==='forgot'?'Saved ↶ · Next review':action==='master'?'Mastered ✦ · Next review':'Saved ✓ · Next review');
    }else{
     finishReviewSession();
-    if(logError)toast('Reviews saved; some activity logging failed.');
+    // A complete refresh is useful at the end, but never delays showing completion.
+    loadWords(true).then(ok=>{if(!ok)toast('Reviews saved. Dashboard refresh failed; try Refresh Notion.')});
    }
-   return;
+  }else{
+   render();
+   toast(action==='master'?'Mastered in Notion ✦':action==='forgot'?'Reset to Class 1 in Notion ↶':'Review approved in Notion ✓');
+   // Reconcile formulas and dashboard separately, without delaying the interaction.
+   loadWords(true).then(ok=>{if(!ok)toast('Review saved. Dashboard refresh failed; try Refresh Notion.')});
   }
-  if(logError)toast('Review saved but history logging failed');
-  else toast(action==='master'?'Mastered in Notion ✦':action==='forgot'?'Reset to Class 1 in Notion ↶':'Review approved in Notion ✓');
  }catch(err){
-  if(updated){
-   reviewSession=null;
-   toast('Review saved, but follow-up failed.');
-  }else toast('Not saved: '+err.message);
- }finally{buttons.forEach(b=>b.disabled=false)}
+  toast('Not saved: '+err.message);
+ }finally{
+  reviewActionBusy=false;
+  buttons.forEach(button=>button.disabled=false);
+ }
 }
 function parseDate(s){if(!s)return null;const d=new Date(String(s));return Number.isNaN(d.getTime())?null:d}
 $('date-label').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
