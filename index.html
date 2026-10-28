@@ -1477,6 +1477,141 @@ function extractMonthResults(blocks){
  }
  return out;
 }
+
+function monthOrdinal(page){
+ const parsed=monthYearAndIndex(page?.title||'');
+ if(parsed.index<0)return null;
+ const explicit=/\b(?:19|20)\d{2}\b/.test(page.title||'');
+ const fromCreated=page.createdTime?new Date(page.createdTime).getFullYear():NaN;
+ const year=explicit?parsed.year:Number.isFinite(fromCreated)?fromCreated:parsed.year;
+ return year*12+parsed.index;
+}
+function getNextMonthProposal(pages=monthOptions){
+ const dated=pages.map(page=>({page,ordinal:monthOrdinal(page)})).filter(item=>item.ordinal!==null);
+ if(!dated.length)return null;
+ dated.sort((a,b)=>b.ordinal-a.ordinal);
+ const latest=dated[0].page,ordinal=dated[0].ordinal+1;
+ const index=((ordinal%12)+12)%12,year=Math.floor(ordinal/12);
+ const month=MONTH_NAMES[index][0].toUpperCase()+MONTH_NAMES[index].slice(1);
+ const hasYear=/\b(?:19|20)\d{2}\b/.test(latest.title);
+ return {title:month+(index===0||hasYear?' '+year:'')+' Tracker',month,year,index,days:new Date(year,index+1,0).getDate(),latest};
+}
+function renderNextMonthButton(){
+ const button=$('month-create-next'),status=$('month-next-info');
+ const proposal=getNextMonthProposal();
+ const parentOkay=!!proposal&&monthRootId!==proposal.latest.id;
+ button.disabled=monthCreateBusy||monthLoading||!parentOkay;
+ button.textContent=monthCreateBusy?'Creating month…':proposal?'＋ Create '+proposal.month:'＋ Create next month';
+ if(monthCreateBusy)return;
+ status.className='month-next-info';
+ status.textContent=!proposal?'Add a month in Notion first to enable automatic creation.':
+  !parentOkay?'Connect the Italian Tracker parent page to create new months alongside the existing ones.':
+  'Up next: '+proposal.title+' · '+proposal.days+' days. Priorities and habits copied with all checks reset.';
+}
+async function readMonthTemplate(option){
+ if(monthState?.id===option.id&&monthState.sourceId)
+  return {goals:monthState.goals.map(g=>g.text),habits:monthState.rows.map(r=>r.title)};
+ const blocks=await retrieveChildren(option.id);
+ const goals=blocks.filter(b=>b.type==='to_do'&&monthlyBlockText(b).trim()).map(monthlyBlockText);
+ const db=blocks.find(b=>b.type==='child_database');
+ if(!db)throw new Error('The latest month has no daily tracker database to copy.');
+ const database=await notion('GET','/databases/'+encodeURIComponent(db.id));
+ const source=database.data_sources?.[0]?.id;
+ if(!source)throw new Error('Could not find the previous month’s habit data source.');
+ const pages=await queryMonthlyRows(source);
+ const habits=pages.map(page=>{
+  const property=page.properties?.Resources||Object.values(page.properties||{}).find(p=>p.type==='title');
+  return propertyText(property);
+ }).filter(Boolean);
+ return {goals,habits};
+}
+function makeMonthBlock(type,text,extra={}){
+ return {object:'block',type,[type]:{rich_text:[{type:'text',text:{content:String(text).slice(0,2000)}}],...extra}};
+}
+function createMonthOpeningBlocks(goals){
+ return [
+  makeMonthBlock('quote','What You Do Today Determines Your Tomorrow'),
+  makeMonthBlock('heading_3','Month Priorities'),
+  ...goals.slice(0,85).map(goal=>makeMonthBlock('to_do',goal,{checked:false})),
+  {object:'block',type:'divider',divider:{}}
+ ];
+}
+function createMonthResultsBlocks(){
+ return [makeMonthBlock('heading_1','Risultati del mese'),makeMonthBlock('heading_3','Film'),
+  makeMonthBlock('heading_3','Romanzi'),makeMonthBlock('heading_3','Parlare')];
+}
+function monthCheckboxSchema(dayCount){
+ const properties={Resources:{title:{}}};
+ for(let day=1;day<=dayCount;day++)properties[String(day)]={checkbox:{}};
+ return properties;
+}
+async function createNextMonth(){
+ if(monthCreateBusy||monthLoading||!monthRootId||!monthState)return;
+ monthCreateBusy=true;
+ const button=$('month-create-next'),status=$('month-next-info');
+ const progress=message=>{status.className='month-next-info is-busy';status.textContent=message};
+ button.disabled=true;
+ let createdId='',createdTitle='',errorText='';
+ try{
+  // Always re-read siblings before creating a page, to avoid using a stale suggestion.
+  progress('Checking your latest months in Notion…');
+  const children=await retrieveChildren(monthRootId);
+  const pages=children.filter(b=>b.type==='child_page').map(b=>({id:b.id,title:b.child_page?.title||'',createdTime:b.created_time}));
+  const proposal=getNextMonthProposal(pages);
+  if(!proposal)throw new Error('No existing month was found under Italian Tracker.');
+  if(proposal.latest.id===monthRootId)throw new Error('Use the Italian Tracker parent page as the connection.');
+  // A newly added month may be unknown to this browser; rechecking the parent determines the next title.
+  progress('Copying habit names and priorities from '+proposal.latest.title+'…');
+  const template=await readMonthTemplate(proposal.latest);
+  if(!template.habits.length)throw new Error('No daily activities were found in the latest month.');
+  createdTitle=proposal.title;
+  progress('Creating '+createdTitle+' in Notion…');
+  const page=await notion('POST','/pages',{
+   parent:{type:'page_id',page_id:monthRootId},
+   properties:{title:{type:'title',title:[{type:'text',text:{content:createdTitle}}]}},
+   icon:{type:'emoji',emoji:'🇮🇹'},
+   children:createMonthOpeningBlocks(template.goals)
+  });
+  if(!page?.id)throw new Error('Notion did not return an ID for the new page.');
+  createdId=page.id;
+  progress('Creating the '+proposal.days+'-day habit tracker…');
+  const database=await notion('POST','/databases',{
+   parent:{type:'page_id',page_id:createdId},
+   title:[{type:'text',text:{content:'Daily Habits'}}],is_inline:true,
+   initial_data_source:{properties:monthCheckboxSchema(proposal.days)}
+  });
+  let dataId=database.data_sources?.[0]?.id;
+  if(!dataId&&database.id){
+   const details=await notion('GET','/databases/'+encodeURIComponent(database.id));
+   dataId=details.data_sources?.[0]?.id;
+  }
+  if(!dataId)throw new Error('Notion created a database without returning its data source.');
+  for(let j=0;j<template.habits.length;j++){
+   progress('Copying '+(j+1)+' of '+template.habits.length+' daily habits…');
+   await notion('POST','/pages',{
+    parent:{type:'data_source_id',data_source_id:dataId},
+    properties:{Resources:{title:[{type:'text',text:{content:template.habits[j].slice(0,2000)}}]}}
+   });
+  }
+  progress('Adding fresh film, reading, and speaking sections…');
+  await notion('PATCH','/blocks/'+encodeURIComponent(createdId)+'/children',{children:createMonthResultsBlocks()});
+  progress('Opening '+createdTitle+'…');
+  await loadAvailableMonths(createdId);
+  toast(createdTitle+' created in Notion ✦');
+ }catch(err){
+  errorText=createdId?createdTitle+' exists in Notion, but its setup was incomplete: '+err.message+'. Open the page in Notion to finish its setup; do not create a duplicate.':
+   'No new month was created: '+err.message;
+  console.warn('New month creation failed',err);
+  if(createdId){
+   try{await loadAvailableMonths(createdId)}catch(e){console.warn('Could not reload the partial month',e)}
+  }
+  toast(createdId?'New month created, but some setup steps failed':'Could not create the next month');
+ }finally{
+  monthCreateBusy=false;
+  renderNextMonthButton();
+  if(errorText){status.className='month-next-info is-error';status.textContent=errorText}
+ }
+}
 async function loadAvailableMonths(preferredId=''){
  const id=monthRootId;if(!id){showMonthError('Paste the Notion page link above to connect your tracker.');return}
  const request=++monthRequest;monthLoading=true;
