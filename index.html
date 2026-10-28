@@ -15,6 +15,7 @@
 @media(max-width:1130px){.app{grid-template-columns:74px minmax(0,1fr)}.sidebar{padding:24px 9px}.brand{justify-content:center;padding:0}.brand strong,.brand .subbrand,.navlink .navtxt,.nav-label,.navnumber,.mini-card,.sidebar-bottom{display:none!important}.navlink{justify-content:center;padding:12px}.navlink.active:before{left:4px}.hero-art{width:170px;flex-basis:170px}.orb{transform:scale(.87)}}
 @media(max-width:860px){.insights,.lowergrid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.main{padding:22px 22px 45px}.hero-art{display:none}.qrow{grid-template-columns:1.1fr 1fr 90px 65px}.qrow>*:nth-child(4){display:none}}
 @media(max-width:600px){.app{display:block}.sidebar{position:static;width:100%;height:auto;display:flex;flex-direction:row;align-items:center;gap:10px;padding:10px 13px}.brand{display:flex;gap:5px}.brand strong{display:block;font-size:16px}.sidebar .navlabel,.sidebar .sidebar-foot{display:none}.sidebar nav{display:flex;gap:4px;overflow:auto}.navlink{margin:0;padding:10px}.navlink.active:before{display:none}.topbar{margin-bottom:16px}.topright{gap:5px}.datepill{display:none}.main{padding:18px 13px 40px}.hero{padding:22px;min-height:auto}.hero h1{font-size:28px}.metric{min-height:115px;padding:15px}.metric-num{font-size:29px}.panel{padding:17px}.progress-content{gap:12px}.donut{width:120px;height:120px;flex-basis:120px}.donut:before{inset:13px}.queue-head{display:block}.controls{margin-top:10px}.qrow{grid-template-columns:1.1fr .75fr 80px;gap:7px;padding:13px 9px}.qrow>*:nth-child(3){display:none}.queue .meaning{max-width:110px}}
+.streak-metric{border-color:#f7a44d46;background:radial-gradient(ellipse at 100% 0%,#f6a34a1b,transparent 68%),linear-gradient(150deg,#172235,#101a2b)}.streak-metric .metric-icon{color:#ffb65b;background:#a86b303a}.streak-fire{font-size:20px;line-height:1}.streak-metric .streak-count{color:#ffd392;display:flex;align-items:baseline;gap:7px;white-space:nowrap}.streak-unit{font-size:12px;letter-spacing:0;font-weight:680;color:#c4a77e}.streak-metric.active{border-color:#e59b537d;box-shadow:0 0 28px #fb9c2e11}.streak-metric.active .streak-fire{filter:drop-shadow(0 0 7px #ffb45288)}.streak-metric .metric-note{line-height:1.5}.metrics{grid-template-columns:repeat(5,minmax(0,1fr))}@media(max-width:1270px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:860px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.streak-metric{grid-column:span 2}}@media(max-width:440px){.streak-metric .metric-num{font-size:32px}}
 </style>
 </head>
 <body>
@@ -46,6 +47,7 @@
   <article class="metric"><div class="metric-top"><span>Words mastered</span><span class="metric-icon"><svg><use href="#i-award"/></svg></span></div><div class="metric-num" id="mastered">0</div><div class="metric-note" id="mastered-note">0% of your collection</div></article>
   <article class="metric"><div class="metric-top"><span>Ready to review</span><span class="metric-icon"><svg><use href="#i-clock"/></svg></span></div><div class="metric-num" id="due">0</div><div class="metric-note">Due now, including overdue</div></article>
   <article class="metric"><div class="metric-top"><span>Overdue words</span><span class="metric-icon"><svg><use href="#i-fire"/></svg></span></div><div class="metric-num" id="overdue">0</div><div class="metric-note">Your catch-up priority</div></article>
+   <article class="metric streak-metric" id="streak-card" aria-live="polite"><div class="metric-top"><span>Study streak</span><span class="metric-icon streak-fire" aria-label="Fire">🔥</span></div><div class="metric-num streak-count"><span id="streak-days">—</span><span class="streak-unit" id="streak-unit">days</span></div><div class="metric-note" id="streak-note">Loading your Notion review history…</div></article>
  </section>
  <section class="insights" id="analytics">
   <article class="panel"><div class="panel-head"><div><h2>Learning activity</h2><div class="subtitle" id="activity-sub">A snapshot of your study rhythm</div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="chip" id="activity-range">Last 7 days</div><button class="track-cta" id="enable-history">＋ Enable history</button></div></div><div class="chart" id="activity-chart"></div><div class="xaxis" id="activity-days"></div><div class="chartfooter"><span><span class="legend-bullet" style="background:var(--mint)"></span>Lexicon review actions</span><span style="margin-left:auto" id="activity-total"></span></div><p class="track-help" id="track-help">Enable tracking to record reviews in Notion.</p></article>
@@ -235,6 +237,44 @@ function render(){const total=list.length,master=list.filter(w=>w.mastered||w.di
   document.querySelectorAll('[data-peek]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.peek;if(peekedTranslations.has(id))peekedTranslations.delete(id);else peekedTranslations.add(id);render()}));
  renderActivity();renderHeat();
  }
+function calculateStudyStreak(events,now=new Date()){
+ const dates=new Set((events||[]).map(e=>{
+  const date=new Date(e.when);
+  return Number.isNaN(date.getTime())?'':iso(date);
+ }).filter(Boolean));
+ const base=startOfDay(now);
+ const studiedToday=dates.has(iso(base));
+ const yesterday=addDays(-1,base);
+ const studiedYesterday=dates.has(iso(yesterday));
+ const startingDay=studiedToday?base:studiedYesterday?yesterday:null;
+ let count=0;
+ if(startingDay){
+  let current=startingDay;
+  while(dates.has(iso(current))&&count<10000){
+   count++;
+   current=addDays(-1,current);
+  }
+ }
+ return {count,studiedToday,studiedYesterday};
+}
+function renderStreak(){
+ const countElement=$('streak-days'),unit=$('streak-unit'),note=$('streak-note'),card=$('streak-card');
+ if(!historyId){
+  countElement.textContent='—';unit.textContent='days';
+  note.textContent=historyError?'Unable to load Notion history':'Enable review history to begin';
+  card.classList.remove('active');return;
+ }
+ if(historyError){
+  countElement.textContent='—';unit.textContent='days';
+  note.textContent='History sync error · refresh to retry';
+  card.classList.remove('active');return;
+ }
+ const streak=calculateStudyStreak(historyEvents);
+ countElement.textContent=String(streak.count);
+ unit.textContent=streak.count===1?'day':'days';
+ note.textContent=streak.studiedToday?'Reviewed today · keep the fire burning ✦':streak.studiedYesterday?'Review today to keep your streak 🔥':'Review a word today to start your streak';
+ card.classList.toggle('active',streak.count>0);
+}
 function actionsOn(date){return historyEvents.filter(e=>iso(new Date(e.when))===iso(date)).length}
 function renderActivity(){
  const counts=Array.from({length:7},(_,i)=>actionsOn(addDays(i-6))),max=Math.max(1,...counts);
@@ -251,6 +291,7 @@ function renderHeat(){
  $('heatmap').innerHTML=values.map((n,i)=>`<div class="heatcell ${n?'l'+Math.min(4,n):''}" title="${iso(addDays(i-83))}: ${n} action${n===1?'':'s'}"></div>`).join('');
  $('heat-sub').textContent=historyId?'Actual Notion review history':'Tracking is not enabled';
  $('streakline').textContent=historyId?values.filter(Boolean).length+' active days':'No history yet';
+ renderStreak();
 }
 
 function normalizeAnswer(value){
