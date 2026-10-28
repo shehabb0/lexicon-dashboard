@@ -133,7 +133,7 @@ const dayDiff=d=>Math.round((startOfDay(d).getTime()-startOfDay(new Date()).getT
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let list=[], filter='due',lang='All',search='',selectedId=null,imported=true,queueLimit=24;
-let conjugationWordId=null,conjugationRequest=0;
+let conjugationWordId=null,conjugationRequest=0,conjugationMode='view',practiceExercises=[];
 const conjugationCache=new Map();
 const peekedTranslations=new Set();
 let dataSourceSchema=null, schemaSourceId='';
@@ -544,13 +544,98 @@ function renderConjugation(data){
  }
  $('conjugation-content').innerHTML=html||'<p class="conjugation-hint">No simple Notion table was found in this verb page. If it is an inline database or an embedded table, open the original page in Notion using the link below.</p>';
 }
-async function showConjugation(wordId,force=false){
+
+function buildConjugationExercises(data){
+ const exercises=[];
+ for(let t=0;t<(data.tables||[]).length;t++){
+  const table=data.tables[t],rows=table.rows||[];
+  if(!rows.length)continue;
+  const width=Math.max(0,...rows.map(r=>r.length));
+  if(width<2)continue;
+  const first=rows[0]||[];
+  const hasHeader=!!table.columnHeader||/^(person|persona|persone|pronome|pronomi|pronoun|pronouns|soggetto|subject|pronom|tense|temps|tempo|personne)s?\b/i.test(String(first[0]||'').trim())||
+    first.slice(1).some(x=>/\b(presente|present|présent|passato|passé|futuro|future|futur|imperfetto|imparfait|perfetto|composé|conditionnel|condizionale|subjonctif|congiuntivo|imperativo|imperative)\b/i.test(x||''));
+  for(let col=1;col<width;col++){
+   const entries=rows.slice(hasHeader?1:0).map(row=>({person:String(row[0]||'').trim(),form:String(row[col]||'').trim()})).filter(row=>row.person&&row.form);
+   if(!entries.length)continue;
+   const label=String(table.label||'').trim(),header=hasHeader?String(first[col]||'').trim():'';
+   const generic=!label||/^conjugation\s*\d+$/i.test(label);
+   const title=generic?(header||label||'Conjugation'):(header&&header.toLowerCase()!==label.toLowerCase()&&!/^(forme|form|conjugaison|coniugazione|conjugation|italiano|français|french|italian|translation|traduction)$/i.test(header)?label+' · '+header:label);
+   exercises.push({id:t+':'+col,title,entries});
+  }
+ }
+ return exercises;
+}
+function setConjugationMode(mode){
+ conjugationMode=mode==='practice'?'practice':'view';
+ $('conjugation-practice').hidden=conjugationMode!=='practice';
+ $('conjugation-content').hidden=conjugationMode==='practice';
+ $('switch-conjugation-practice').hidden=conjugationMode==='practice';
+ $('conjugation-desc').textContent=conjugationMode==='practice'?'Choose one tense and fill in its forms from memory.':'Conjugation tables from your Notion verb page.';
+}
+function prepareConjugationPractice(data){
+ practiceExercises=buildConjugationExercises(data);
+ const options=$('tense-select'),oldSelection=options.value;
+ options.replaceChildren();
+ for(const ex of practiceExercises){const option=document.createElement('option');option.value=ex.id;option.textContent=ex.title;options.appendChild(option)}
+ if(practiceExercises.some(ex=>ex.id===oldSelection))options.value=oldSelection;
+ $('check-conjugation').disabled=!practiceExercises.length;
+ $('retry-conjugation').disabled=!practiceExercises.length;
+ renderPracticeFields();
+}
+function renderPracticeFields(){
+ const ex=practiceExercises.find(x=>x.id===$('tense-select').value);
+ const area=$('practice-fields');
+ $('practice-summary').hidden=true;
+ $('practice-summary').textContent='';
+ $('practice-summary').className='quiz-feedback';
+ if(!ex){
+  area.innerHTML='<p class="conjugation-hint">This verb has no practiceable Notion table. Use “View original tables” to inspect the content, or open it in Notion.</p>';
+  return;
+ }
+ // Answer values are deliberately absent from the practice HTML until checking.
+ area.innerHTML=ex.entries.map((item,i)=>'<label class="practice-prompt" for="practice-input-'+i+'">'+esc(item.person)+'</label><div class="practice-field"><input class="practice-answer" id="practice-input-'+i+'" data-index="'+i+'" type="text" autocomplete="off" spellcheck="false" placeholder="Type the form…" maxlength="500"/><div class="practice-result" id="practice-result-'+i+'" aria-live="polite"></div></div>').join('');
+ const first=area.querySelector('input');
+ if(first&&conjugationMode==='practice')first.focus();
+}
+function resetConjugationPractice(){
+ renderPracticeFields();
+ const first=$('practice-fields').querySelector('input');if(first)first.focus();
+}
+function gradeConjugation(e){
+ e.preventDefault();
+ const ex=practiceExercises.find(x=>x.id===$('tense-select').value);if(!ex)return;
+ const boxes=[...$('practice-fields').querySelectorAll('.practice-answer')];
+ if(!boxes.some(input=>input.value.trim())){boxes[0]?.focus();return}
+ let correct=0,close=0,wrong=0;
+ for(const field of boxes){
+  const i=Number(field.dataset.index),item=ex.entries[i];
+  if(!item)continue;
+  const outcome=evaluateAnswer(field.value,item.form,'conjugation',item.person);
+  const status=outcome.state;
+  const label=$('practice-result-'+i);
+  field.classList.remove('correct','incorrect');
+  if(status==='correct'){correct++;field.classList.add('correct');label.className='practice-result good';label.textContent='✓ Correct'}
+  else{
+   if(status==='close')close++;else wrong++;
+   field.classList.add('incorrect');label.className='practice-result bad';
+   label.textContent=(status==='close'?'Almost. ':'')+'Notion: '+item.form;
+  }
+ }
+ const summary=$('practice-summary');summary.hidden=false;
+ summary.className='quiz-feedback '+(correct===ex.entries.length?'ok':correct||close?'close':'wrong');
+ summary.textContent=correct+' / '+ex.entries.length+' correct'+(close?' · '+close+' nearly correct':'')+(correct===ex.entries.length?' — Excellent! ✦':'. Review the highlighted forms and try again.');
+}
+async function showConjugation(wordId,force=false,mode='view'){
  const word=list.find(w=>w.id===wordId);
  if(!word||typeKind(word.type)!=='verb')return;
  conjugationWordId=wordId;
  const request=++conjugationRequest;
  $('conjugation-title').textContent=word.word+' · Conjugation';
  $('conjugation-desc').textContent='Conjugation tables from your Notion verb page.';
+ $('conjugation-content').hidden=false;
+ $('conjugation-practice').hidden=true;
+ $('switch-conjugation-practice').hidden=true;
  $('conjugation-content').innerHTML='<p class="conjugation-hint">Loading your conjugations from Notion…</p>';
  $('conjugation-notion-link').href=word.url||'https://www.notion.so/'+wordId.replaceAll('-','');
  $('conjugation-overlay').classList.add('open');
@@ -560,9 +645,14 @@ async function showConjugation(wordId,force=false){
   if(request!==conjugationRequest||conjugationWordId!==wordId)return;
   conjugationCache.set(wordId,result);
   renderConjugation(result);
+  prepareConjugationPractice(result);
+  setConjugationMode(mode);
  }catch(e){
   if(request!==conjugationRequest)return;
   $('conjugation-content').innerHTML='<p class="conjugation-hint">Could not load this conjugation: '+esc(e.message)+'. Open the original word page in Notion using the link below.</p>';
+  $('conjugation-practice').hidden=true;
+  $('conjugation-content').hidden=false;
+  $('switch-conjugation-practice').hidden=true;
  }finally{if(request===conjugationRequest)$('conjugation-refresh').disabled=false}
 }
 function closeConjugation(){conjugationRequest++;conjugationWordId=null;$('conjugation-overlay').classList.remove('open')}
@@ -615,9 +705,15 @@ $('start').onclick=()=>{const due=dueWords().sort((a,b)=>a.next-b.next);if(due.l
 $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('clear-translation').onclick=()=>resetTranslationPractice(list.find(w=>w.id===selectedId));
  $('translation-attempt').addEventListener('input',()=>{$('translation-feedback').hidden=true});
- $('show-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId)};
+ $('show-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId,false,'view')};
+ $('practice-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId,false,'practice')};
+ $('switch-conjugation-practice').onclick=()=>{setConjugationMode('practice');renderPracticeFields()};
+ $('switch-conjugation-view').onclick=()=>setConjugationMode('view');
+ $('tense-select').onchange=renderPracticeFields;
+ $('conjugation-practice-form').addEventListener('submit',gradeConjugation);
+ $('retry-conjugation').onclick=resetConjugationPractice;
  $('conjugation-close').onclick=closeConjugation;
- $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true)};
+ $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true,conjugationMode)};
  $('conjugation-overlay').onclick=e=>{if(e.target===$('conjugation-overlay'))closeConjugation()};
  $('flip').onclick=()=>{const a=$('flash-answer'),ex=$('flash-example');const hidden=a.classList.toggle('hidden');ex.classList.toggle('hidden',hidden);a.setAttribute('aria-hidden',String(hidden));ex.setAttribute('aria-hidden',String(hidden));$('flip').textContent=hidden?'Reveal translation':'Hide translation'};
 $('close').onclick=()=>$('overlay').classList.remove('open');$('overlay').onclick=e=>{if(e.target===$('overlay'))$('overlay').classList.remove('open')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('conjugation-overlay').classList.contains('open'))closeConjugation();else{$('overlay').classList.remove('open');$('add-overlay').classList.remove('open')}}});
