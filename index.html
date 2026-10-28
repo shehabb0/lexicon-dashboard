@@ -63,7 +63,7 @@
  <h4 class="quiz-title">✍ Test your translation</h4><p class="quiz-caption">Write the meaning from memory, then check it against your Notion translation.</p>
  <form id="translation-quiz-form">
   <label for="translation-attempt" class="practice-label">Your answer</label>
-  <input id="translation-attempt" class="quiz-input" type="text" spellcheck="false" autocomplete="off" placeholder="Type the meaning…" maxlength="2000"/>
+  <input id="translation-attempt" class="quiz-input" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Type your translation here…" maxlength="2000" aria-label="Type your translation"/>
   <div class="quiz-row"><button type="submit" class="quiz-check" id="check-translation">✓ Check answer</button><button type="button" class="quiz-secondary" id="clear-translation">Try again</button></div>
   <div id="translation-feedback" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
  </form>
@@ -228,15 +228,22 @@ function resetTranslationPractice(word){
  $('translation-feedback').hidden=true;
  $('translation-feedback').textContent='';
  $('translation-feedback').className='quiz-feedback';
- $('check-translation').disabled=!word?.meaning?.trim();
- $('translation-attempt').disabled=!word?.meaning?.trim();
- $('translation-attempt').placeholder=word?.meaning?.trim()?'Type the meaning…':'No translation found in Notion';
+ $('check-translation').disabled=false;
+ $('translation-attempt').disabled=false;
+ $('translation-attempt').readOnly=false;
+ $('translation-attempt').placeholder='Type your translation here…';
 }
 function checkTranslation(e){
  e.preventDefault();
  const word=list.find(w=>w.id===selectedId);if(!word)return;
  const typed=$('translation-attempt').value.trim();
  if(!typed){$('translation-attempt').focus();return}
+ if(!word.meaning?.trim()){
+  const fb=$('translation-feedback');
+  fb.hidden=false;fb.className='quiz-feedback close';
+  fb.textContent='Your answer was entered, but I could not find a reference translation in Notion for this word. Check its Translation property to enable grading.';
+  return;
+ }
  const result=evaluateAnswer(typed,word.meaning,'translation');
  const feedback=$('translation-feedback');feedback.hidden=false;
  feedback.className='quiz-feedback '+(result.state==='correct'?'ok':result.state==='close'?'close':'wrong');
@@ -268,11 +275,27 @@ function propByCandidates(props,candidates){
  for(const phrase of candidates){const similar=entries.find(([k])=>k.toLowerCase().includes(phrase.toLowerCase()));if(similar)return similar[1]}
  return null;
 }
+function translationFromProperties(props){
+ const entries=Object.entries(props||{});
+ const candidates=['Translation','Write Translation','Meaning','Definition','Answer','English','Traduction','Traduzione','Signification','Significato','الترجمة','ترجمة'];
+ for(const phrase of candidates){
+  const match=entries.find(([name,p])=>name.trim().toLowerCase()===phrase.toLowerCase() && p && p.type!=='button');
+  if(match){const content=propertyText(match[1]).trim();if(content)return content}
+ }
+ for(const phrase of candidates){
+  for(const [name,prop] of entries){
+   if(name.toLowerCase().includes(phrase.toLowerCase()) && prop?.type!=='button'){
+    const content=propertyText(prop).trim();if(content)return content
+   }
+  }
+ }
+ return '';
+}
 function mapPage(page){
  const p=page.properties||{};
  const title=Object.entries(p).find(([,v])=>v.type==='title');
  const word=title?propertyText(title[1]):'';
- const meaning=propertyText(propByCandidates(p,['Write Translation','Translation','Meaning','English','Definition','Answer']));
+ const meaning=translationFromProperties(p);
  const difficulty=propertyText(p.Difficulty);
  const type=propertyText(propByCandidates(p,['Type']));
  const klass=Number(propertyText(p.Class))||1;
@@ -545,27 +568,71 @@ function renderConjugation(data){
  $('conjugation-content').innerHTML=html||'<p class="conjugation-hint">No simple Notion table was found in this verb page. If it is an inline database or an embedded table, open the original page in Notion using the link below.</p>';
 }
 
+function parseConjugatedCell(value){
+ const raw=String(value||'').replace(/[\u00a0\u202f]/g,' ').replace(/\s+/g,' ').trim();
+ if(!raw)return null;
+ // Apostrophised French pronouns are attached to the verb: j'ai, j’habite.
+ const apostrophe=raw.match(/^(j['’])\s*(\S.*)$/i);
+ if(apostrophe)return {person:"j’",form:apostrophe[2].trim()};
+ const match=raw.match(/^(lui\s*\/\s*lei|lei\s*\/\s*lui|il\s*\/\s*elle|ils\s*\/\s*elles|elles\s*\/\s*ils|he\s*\/\s*she|io|tu|lui|lei|noi|voi|loro|egli|ella|je|il|elle|on|nous|vous|ils|elles|i|you|he|she|we|they)\s+(.+)$/i);
+ if(!match)return null;
+ const key=match[1].toLowerCase().replace(/\s*\/\s*/g,'/');
+ const labels={'lui/lei':'Lui / lei','lei/lui':'Lui / lei','il/elle':'Il / elle','ils/elles':'Ils / elles','elles/ils':'Ils / elles','he/she':'He / she'};
+ return {person:labels[key]||key,form:match[2].trim()};
+}
+function singlePronoun(value){
+ const raw=String(value||'').replace(/\s+/g,' ').trim();
+ if(!raw)return '';
+ const parsed=parseConjugatedCell(raw+' PLACEHOLDER');
+ return parsed&&parsed.form==='PLACEHOLDER'?parsed.person:'';
+}
 function buildConjugationExercises(data){
  const exercises=[];
  for(let t=0;t<(data.tables||[]).length;t++){
   const table=data.tables[t],rows=table.rows||[];
   if(!rows.length)continue;
   const width=Math.max(0,...rows.map(r=>r.length));
-  if(width<2)continue;
+  if(width<1)continue;
   const first=rows[0]||[];
-  const hasHeader=!!table.columnHeader||/^(person|persona|persone|pronome|pronomi|pronoun|pronouns|soggetto|subject|pronom|tense|temps|tempo|personne)s?\b/i.test(String(first[0]||'').trim())||
-    first.slice(1).some(x=>/\b(presente|present|présent|passato|passé|futuro|future|futur|imperfetto|imparfait|perfetto|composé|conditionnel|condizionale|subjonctif|congiuntivo|imperativo|imperative)\b/i.test(x||''));
-  for(let col=1;col<width;col++){
-   const entries=rows.slice(hasHeader?1:0).map(row=>({person:String(row[0]||'').trim(),form:String(row[col]||'').trim()})).filter(row=>row.person&&row.form);
+  const headerPattern=/\b(presente|present|présent|passato|passé|futuro|future|futur|imperfetto|imparfait|perfetto|composé|conditionnel|condizionale|subjonctif|congiuntivo|imperativo|imperative)\b/i;
+  const promptHeader=/^(person|persona|persone|pronome|pronomi|pronoun|pronouns|soggetto|subject|pronom|personne)s?\b/i;
+  const hasHeader=!!table.columnHeader||first.some(cell=>headerPattern.test(String(cell||'')))||promptHeader.test(String(first[0]||'').trim());
+  const contentRows=rows.slice(hasHeader?1:0);
+  if(!contentRows.length)continue;
+  // A separate pronoun column is different from Notion tables containing "io abito" in each cell.
+  const firstSubjects=contentRows.map(row=>String(row[0]||'').trim()).filter(Boolean);
+  const separateSubjectColumn=firstSubjects.length>0&&firstSubjects.filter(cell=>!!singlePronoun(cell)).length>=Math.ceil(firstSubjects.length*.6);
+  const label=String(table.label||'').trim();
+  const generic=!label||/^conjugation\s*\d+$/i.test(label);
+  const startCol=separateSubjectColumn?1:0;
+  for(let col=startCol;col<width;col++){
+   const entries=[];
+   for(const row of contentRows){
+    const rawForm=String(row[col]||'').trim();
+    if(!rawForm)continue;
+    if(separateSubjectColumn){
+     const person=singlePronoun(row[0])||String(row[0]||'').trim();
+     if(!person)continue;
+     const combined=parseConjugatedCell(rawForm);
+     // If the conjugation cell redundantly includes its own pronoun, don't make users type that pronoun.
+     const form=combined?combined.form:rawForm;
+     if(form)entries.push({person,form});
+    }else{
+     // E.g. "io abito", "tu abiti", "Lui / lei abita", all in the first column.
+     const combined=parseConjugatedCell(rawForm);
+     if(combined)entries.push(combined);
+    }
+   }
    if(!entries.length)continue;
-   const label=String(table.label||'').trim(),header=hasHeader?String(first[col]||'').trim():'';
-   const generic=!label||/^conjugation\s*\d+$/i.test(label);
+   const header=hasHeader?String(first[col]||'').trim():'';
+   // Skip columns with only one parsed item when other columns have full 6-person conjugations.
    const title=generic?(header||label||'Conjugation'):(header&&header.toLowerCase()!==label.toLowerCase()&&!/^(forme|form|conjugaison|coniugazione|conjugation|italiano|français|french|italian|translation|traduction)$/i.test(header)?label+' · '+header:label);
    exercises.push({id:t+':'+col,title,entries});
   }
  }
  return exercises;
 }
+
 function setConjugationMode(mode){
  conjugationMode=mode==='practice'?'practice':'view';
  $('conjugation-practice').hidden=conjugationMode!=='practice';
