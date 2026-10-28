@@ -31,6 +31,7 @@
 .month-results-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.month-result-col{border:1px solid #3c4560;background:#101d30;border-radius:13px;padding:16px;min-width:0}.month-result-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:780;font-size:13px;color:#e7dbff}.month-result-count{font-size:10px;color:#b19fcb}.month-result-list{min-height:75px;padding-left:18px;color:#adbad2;font-size:11px;line-height:1.65;overflow-wrap:anywhere}.month-result-list li{margin:7px 0}.month-result-form{display:flex;gap:5px;margin-top:12px}.month-result-form input{padding:9px 10px;font-size:10px;flex:1;min-width:0;background:#0c1727;border:1px solid #49506a;color:#e5f0ff;border-radius:8px}.month-result-form button{font-size:10px}.month-results-panel{margin-bottom:17px}.month-footer-note{margin-bottom:30px}
 @media(max-width:1020px){.month-panel-grid{grid-template-columns:1fr}.month-results-grid{grid-template-columns:1fr}.month-hero{flex-wrap:wrap}}
 @media(max-width:600px){.month-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.month-summary-card:last-child{grid-column:span 2}.month-hero{padding:22px}.month-topbar{align-items:flex-start;flex-direction:column}.month-hero-actions{flex-wrap:wrap}.month-panel{padding:16px}.month-table-foot .month-inline-form{max-width:100%}}
+.month-create-button{color:#241832;border:1px solid #c5a9ff;background:linear-gradient(120deg,#d9c2ff,#b49eff);border-radius:9px;padding:10px 14px;font-size:11px;font-weight:850;white-space:nowrap}.month-create-button:hover:not(:disabled){filter:brightness(1.08)}.month-create-button:disabled{opacity:.5;cursor:default}.month-next-info{color:#958ead;font-size:11px;margin:-4px 0 18px;line-height:1.5}.month-next-info.is-busy{color:#dac3ff}.month-next-info.is-error{color:#ffc0cb}
 </style>
 </head>
 <body>
@@ -95,8 +96,9 @@
   <div id="month-data" hidden>
    <div class="month-topbar">
     <div><span class="month-quiet-title">CURRENT WORKSPACE</span><h2 id="month-current-title">Monthly Tracker</h2><div id="month-source-info" class="month-source-info">Live Notion data</div></div>
-    <div class="month-controls"><label for="month-picker" class="month-picker-label">Choose a month</label><select id="month-picker" aria-label="Choose monthly tracker"></select><a id="month-open-notion" class="month-notion-link" target="_blank" rel="noopener noreferrer" href="#">Open in Notion ↗</a></div>
+    <div class="month-controls"><label for="month-picker" class="month-picker-label">Choose a month</label><select id="month-picker" aria-label="Choose monthly tracker"></select><button type="button" id="month-create-next" class="month-create-button" disabled>＋ Create next month</button><a id="month-open-notion" class="month-notion-link" target="_blank" rel="noopener noreferrer" href="#">Open in Notion ↗</a></div>
    </div>
+   <p id="month-next-info" class="month-next-info" role="status" aria-live="polite">The next month will be suggested automatically.</p>
    <div class="month-summary-grid">
     <div class="month-summary-card"><div class="month-summary-label">🎯 Month priorities</div><div class="month-summary-num" id="month-goals-stat">0 / 0</div><div class="month-summary-detail">goals completed</div></div>
     <div class="month-summary-card"><div class="month-summary-label">✅ Daily activities</div><div class="month-summary-num" id="month-checks-stat">0</div><div class="month-summary-detail">total checkmarks</div></div>
@@ -1389,7 +1391,7 @@ const MONTH_NAMES=['gennaio','febbraio','marzo','aprile','maggio','giugno','lugl
 const MONTH_ENGLISH=['january','february','march','april','may','june','july','august','september','october','november','december'];
 const MONTH_FRENCH=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 let activeWorkspace='vocabulary',monthRequest=0,monthLoading=false;
-let monthRootId='',monthOptions=[],monthState=null;
+let monthRootId='',monthOptions=[],monthState=null,monthCreateBusy=false;
 const monthWrites=new Set();
 try{monthRootId=localStorage.getItem(MONTHLY_STORAGE_KEY)||''}catch(e){console.warn('Month tracker settings are not available',e)}
 function normalizeMonthId(input){
@@ -1485,7 +1487,7 @@ async function loadAvailableMonths(preferredId=''){
  try{
   const blocks=await retrieveChildren(id);
   if(request!==monthRequest)return;
-  let choices=blocks.filter(b=>b.type==='child_page').map(b=>({id:b.id,title:b.child_page?.title||'Monthly tracker'}))
+  let choices=blocks.filter(b=>b.type==='child_page').map(b=>({id:b.id,title:b.child_page?.title||'Monthly tracker',createdTime:b.created_time}))
    .filter(b=>/tracker|mese|month|mensuel|mese|ottobre|novembre|dicembre|gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre/i.test(b.title));
   if(!choices.length&&blocks.some(b=>b.type==='child_database'||b.type==='to_do')){
    const page=await notion('GET','/pages/'+encodeURIComponent(id));
@@ -1537,11 +1539,12 @@ async function loadMonthPage(id,externalRequest=null){
   $('month-open-notion').href=monthPageUrl(id);
   $('month-connection').hidden=true;$('month-data').hidden=false;
   renderMonthWorkspace();
+  renderNextMonthButton();
  }catch(err){
   if(req!==monthRequest)return;
   console.warn('Could not load the selected month',err);
   showMonthError('Could not load this monthly page or its habit database: '+err.message+'. Check your Notion integration permissions.');
- }finally{if(req===monthRequest){monthLoading=false;$('month-loading').hidden=true}}
+ }finally{if(req===monthRequest){monthLoading=false;$('month-loading').hidden=true;renderNextMonthButton()}}
 }
 function monthHabitEmoji(name){
  const text=String(name||'').toLowerCase();
@@ -1674,6 +1677,7 @@ $('month-edit-connection').onclick=()=>{
 $('month-cancel-connection').onclick=()=>{if(monthState){$('month-connection').hidden=true;$('month-data').hidden=false;$('month-connect-error').textContent=''}};
 $('month-refresh').onclick=()=>monthRootId?loadAvailableMonths(monthState?.id):$('month-connection').hidden=false;
 $('month-picker').onchange=()=>loadMonthPage($('month-picker').value);
+$('month-create-next').onclick=createNextMonth;
 $('month-add-goal-form').addEventListener('submit',addMonthGoal);
 $('month-add-habit-form').addEventListener('submit',addMonthHabit);
 $('month-results-grid').addEventListener('submit',addMonthResult);
