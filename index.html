@@ -1382,9 +1382,296 @@ async function act(mode){
   buttons.forEach(button=>button.disabled=false);
  }
 }
+
+/* MONTHLY TRACKER — a separate workspace using the existing Notion connection. */
+const MONTHLY_STORAGE_KEY='lexicon_month_tracker_page';
+const MONTH_NAMES=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const MONTH_ENGLISH=['january','february','march','april','may','june','july','august','september','october','november','december'];
+const MONTH_FRENCH=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+let activeWorkspace='vocabulary',monthRequest=0,monthLoading=false;
+let monthRootId='',monthOptions=[],monthState=null;
+const monthWrites=new Set();
+try{monthRootId=localStorage.getItem(MONTHLY_STORAGE_KEY)||''}catch(e){console.warn('Month tracker settings are not available',e)}
+function normalizeMonthId(input){
+ const value=String(input||'').trim();
+ const dashed=value.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i);
+ const plain=value.match(/[a-f0-9]{32}/i);
+ const raw=dashed?.[0]||plain?.[0]||'';
+ if(!raw)return '';
+ const compact=raw.toLowerCase().replace(/-/g,'');
+ return compact.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/,'$1-$2-$3-$4-$5');
+}
+function monthPageUrl(id){return 'https://www.notion.so/'+String(id||'').replace(/-/g,'')}
+function showWorkspace(area='vocabulary',target='overview'){
+ activeWorkspace=area;
+ const monthly=area==='monthly';
+ $('vocabulary-workspace').hidden=monthly;
+ $('monthly-workspace').hidden=!monthly;
+ $('add-word').hidden=monthly;
+ $('workspace-breadcrumb').textContent=monthly?'Monthly Tracker':target==='mastered'?'Mastered words':target==='analytics'?'Analytics':target==='queue'?'Review queue':'Overview';
+ document.querySelectorAll('[data-nav]').forEach(button=>button.classList.toggle('active',button.dataset.nav===(monthly?'monthly':target)));
+ window.scrollTo({top:0,behavior:'instant'});
+ if(monthly&&!monthLoading){
+  if(monthRootId&&!monthState)loadAvailableMonths();
+  else if(!monthRootId){$('month-connection').hidden=false;$('month-data').hidden=true;}
+ }
+}
+function showMonthError(message){
+ $('month-connect-error').textContent=message;
+ $('month-connection').hidden=false;
+ $('month-data').hidden=true;
+ $('month-loading').hidden=true;
+}
+function monthYearAndIndex(label){
+ const text=String(label||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+ const yearMatch=text.match(/\b(?:20\d\d|19\d\d)\b/);
+ const year=yearMatch?Number(yearMatch[0]):new Date().getFullYear();
+ const names=[...MONTH_NAMES,...MONTH_ENGLISH,...MONTH_FRENCH];
+ let idx=names.findIndex(x=>text.includes(x.normalize('NFD').replace(/[\u0300-\u036f]/g,'')));
+ return {year,index:idx<0?-1:idx%12};
+}
+function numDaysInMonth(title){
+ const {year,index}=monthYearAndIndex(title);
+ return index<0?31:new Date(year,index+1,0).getDate();
+}
+function monthIsCurrent(title){
+ const {year,index}=monthYearAndIndex(title),now=new Date();
+ return index===now.getMonth()&&year===now.getFullYear();
+}
+async function queryMonthlyRows(sourceId){
+ let cursor=null,items=[];
+ do{
+  const body={page_size:100};
+  if(cursor)body.start_cursor=cursor;
+  const batch=await notion('POST','/data_sources/'+encodeURIComponent(sourceId)+'/query',body);
+  items.push(...(batch.results||[]));
+  if(items.length>=500)throw new Error('This monthly tracker has more than 500 habits.');
+  cursor=batch.has_more?batch.next_cursor:null;
+ }while(cursor);
+ return items;
+}
+function monthlyBlockText(block){
+ return textFromRich(block?.[block.type]?.rich_text||[]);
+}
+function extractMonthResults(blocks){
+ const out={Film:{label:'Film',icon:'🎬',entries:[],headingId:null,lastId:null},Romanzi:{label:'Romanzi',icon:'📚',entries:[],headingId:null,lastId:null},Parlare:{label:'Parlare',icon:'🗣️',entries:[],headingId:null,lastId:null}};
+ let started=false,current=null;
+ for(const b of blocks){
+  const type=b.type||'',title=monthlyBlockText(b).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  if(type.startsWith('heading_')){
+   if(/risultati|monthly results|month results/.test(title)){started=true;current=null;continue}
+   if(!started)continue;
+   const matched=/\bfilm\b|movie|cinema/.test(title)?'Film':/romanzi|romanz|novel|book|libri/.test(title)?'Romanzi':/parlare|speaking|conversation/.test(title)?'Parlare':null;
+   current=matched;
+   if(matched){out[matched].headingId=b.id;out[matched].lastId=b.id}
+   continue;
+  }
+  if(!started||!current)continue;
+  if(['bulleted_list_item','numbered_list_item','paragraph','to_do'].includes(type)){
+   const content=monthlyBlockText(b);
+   if(content.trim()){out[current].entries.push({id:b.id,text:content});out[current].lastId=b.id}
+  }
+ }
+ return out;
+}
+async function loadAvailableMonths(preferredId=''){
+ const id=monthRootId;if(!id){showMonthError('Paste the Notion page link above to connect your tracker.');return}
+ const request=++monthRequest;monthLoading=true;
+ $('month-loading').hidden=false;$('month-connection').hidden=true;$('month-data').hidden=true;
+ $('month-connect-error').textContent='';
+ $('month-root-input').value=id;
+ try{
+  const blocks=await retrieveChildren(id);
+  if(request!==monthRequest)return;
+  let choices=blocks.filter(b=>b.type==='child_page').map(b=>({id:b.id,title:b.child_page?.title||'Monthly tracker'}))
+   .filter(b=>/tracker|mese|month|mensuel|mese|ottobre|novembre|dicembre|gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre/i.test(b.title));
+  if(!choices.length&&blocks.some(b=>b.type==='child_database'||b.type==='to_do')){
+   const page=await notion('GET','/pages/'+encodeURIComponent(id));
+   const props=Object.values(page.properties||{}).find(p=>p.type==='title');
+   choices=[{id,title:propertyText(props)||'Monthly Tracker'}];
+  }
+  if(!choices.length)throw new Error('No monthly tracker pages were found. Share the Italian Tracker parent page and its monthly pages with your Notion integration, or paste your Ottobre Tracker page URL instead.');
+  monthOptions=choices;
+  const picker=$('month-picker');picker.replaceChildren();
+  for(const item of choices){const el=document.createElement('option');el.value=item.id;el.textContent=item.title;picker.appendChild(el)}
+  const chosen=choices.find(b=>b.id===(preferredId||monthState?.id))||choices.find(b=>monthIsCurrent(b.title))||choices[0];
+  $('month-new-notion').href=monthPageUrl(id);
+  try{localStorage.setItem(MONTHLY_STORAGE_KEY,id)}catch(e){}
+  await loadMonthPage(chosen.id,request);
+ }catch(err){
+  if(request!==monthRequest)return;
+  console.warn('Monthly tracker connection failed',err);
+  showMonthError('Notion could not open this tracker: '+err.message+' Make sure the page and its database are shared with your Lexicon integration.');
+ }finally{if(request===monthRequest){monthLoading=false;$('month-loading').hidden=true}}
+}
+async function loadMonthPage(id,externalRequest=null){
+ const req=externalRequest===null?++monthRequest:externalRequest;
+ monthLoading=true;
+ $('month-loading').hidden=false;$('month-data').hidden=true;
+ try{
+  const option=monthOptions.find(m=>m.id===id);
+  if(!option)throw new Error('This month is not available.');
+  const blocks=await retrieveChildren(id);
+  const dbBlock=blocks.find(b=>b.type==='child_database');
+  const goals=blocks.filter(b=>b.type==='to_do'&&monthlyBlockText(b).trim()).map(b=>({id:b.id,text:monthlyBlockText(b),done:!!b.to_do?.checked}));
+  let sourceId=null,dayColumns=[],rows=[],sourceTitle='';
+  if(dbBlock){
+   const database=await notion('GET','/databases/'+encodeURIComponent(dbBlock.id));
+   sourceId=(database.data_sources||[])[0]?.id||null;
+   if(sourceId){
+    const schema=await notion('GET','/data_sources/'+encodeURIComponent(sourceId));
+    sourceTitle=textFromRich(schema.title||[])||database.title?.map(x=>x.plain_text||x.text?.content||'').join('')||'Daily habits';
+    dayColumns=Object.entries(schema.properties||{}).filter(([name,prop])=>/^(?:[1-9]|[12]\d|3[01])$/.test(name)&&prop.type==='checkbox')
+      .map(([name])=>Number(name)).sort((a,b)=>a-b);
+    const pages=await queryMonthlyRows(sourceId);
+    rows=pages.map(page=>({id:page.id,title:propertyText(page.properties?.Resources)||Object.values(page.properties||{}).filter(p=>p.type==='title').map(propertyText)[0]||'Activity',days:Object.fromEntries(dayColumns.map(n=>[n,!!page.properties?.[String(n)]?.checkbox]))}));
+   }
+  }
+  if(req!==monthRequest)return;
+  monthState={id,title:option.title,blocks,goals,results:extractMonthResults(blocks),dbId:dbBlock?.id||null,sourceId,sourceTitle,dayColumns,rows};
+  $('month-picker').value=id;
+  $('month-current-title').textContent=option.title;
+  $('month-source-info').textContent=(sourceTitle||'This month')+' · Live from Notion';
+  $('month-open-notion').href=monthPageUrl(id);
+  $('month-connection').hidden=true;$('month-data').hidden=false;
+  renderMonthWorkspace();
+ }catch(err){
+  if(req!==monthRequest)return;
+  console.warn('Could not load the selected month',err);
+  showMonthError('Could not load this monthly page or its habit database: '+err.message+'. Check your Notion integration permissions.');
+ }finally{if(req===monthRequest){monthLoading=false;$('month-loading').hidden=true}}
+}
+function monthHabitEmoji(name){
+ const text=String(name||'').toLowerCase();
+ if(/busuu|duolingo/.test(text))return '🎓';
+ if(/voca|lexicon|word/.test(text))return '📖';
+ if(/tandem|lingbe|parlare|speaking/.test(text))return '🗣️';
+ if(/music|musica/.test(text))return '🎵';
+ if(/film|cinema|movie/.test(text))return '🎬';
+ if(/legg|read|libri/.test(text))return '📚';
+ return '✦';
+}
+function renderMonthWorkspace(){
+ if(!monthState)return;
+ const m=monthState,maxDays=numDaysInMonth(m.title),today=(monthIsCurrent(m.title)?new Date().getDate():null);
+ const completed=m.goals.filter(g=>g.done).length,checks=m.rows.reduce((sum,r)=>sum+m.dayColumns.filter(d=>d<=maxDays&&r.days[d]).length,0);
+ const activeDays=m.dayColumns.filter(d=>d<=maxDays&&m.rows.some(r=>r.days[d])).length;
+ $('month-goals-stat').textContent=completed+' / '+m.goals.length;
+ $('month-priority-badge').textContent=completed+' done';
+ $('month-checks-stat').textContent=String(checks);
+ $('month-active-stat').textContent=String(activeDays);
+ $('month-priorities-list').innerHTML=m.goals.length?m.goals.map(g=>'<div class="month-goal-item '+(g.done?'done':'')+'" data-goal-id="'+esc(g.id)+'"><input type="checkbox" id="mg-'+esc(g.id)+'" data-month-goal="'+esc(g.id)+'" '+(g.done?'checked':'')+' aria-label="'+esc(g.text)+'"><label for="mg-'+esc(g.id)+'">'+esc(g.text)+'</label></div>').join(''):'<p class="month-empty">No monthly priorities yet. Add your first goal below.</p>';
+ $('month-today-date').textContent=today?'Day '+today:'Not this month';
+ const daily=m.rows.filter(r=>today&&m.dayColumns.includes(today));
+ $('month-today-habits').innerHTML=daily.length?daily.map(r=>'<div class="month-today-item '+(r.days[today]?'done':'')+'"><input type="checkbox" id="mt-'+esc(r.id)+'" data-month-cell="'+esc(r.id)+'" data-day="'+today+'" '+(r.days[today]?'checked':'')+'><label for="mt-'+esc(r.id)+'">'+monthHabitEmoji(r.title)+' '+esc(r.title)+'</label></div>').join(''):'<p class="month-empty">'+(today?'The Notion database has no checkboxes for today.':'Select a month matching the current date to see today’s habits. You can still edit any day in the grid below.')+'</p>';
+ $('month-today-hint').textContent=today?'Checking a habit also updates the full calendar and Notion.':'This month is viewable and editable using the day grid.';
+ $('month-days-count').textContent=maxDays+' calendar days';
+ $('month-table-head').innerHTML='<tr><th scope="col">Your activity</th>'+Array.from({length:maxDays},(_,i)=>{const day=i+1;return '<th scope="col" class="'+(day===today?'month-day-current':'')+'">'+day+'</th>'}).join('')+'</tr>';
+ $('month-table-body').innerHTML=m.rows.length?m.rows.map(row=>'<tr><td>'+monthHabitEmoji(row.title)+' '+esc(row.title)+'</td>'+Array.from({length:maxDays},(_,i)=>{const day=i+1,available=m.dayColumns.includes(day);return '<td class="'+(day===today?'month-day-current':'')+'"><input type="checkbox" class="month-day-checkbox" data-month-cell="'+esc(row.id)+'" data-day="'+day+'" '+(row.days[day]?'checked':'')+' '+(!available?'disabled title="This day does not exist in your Notion database"':'')+' aria-label="'+esc(row.title)+' day '+day+'"/></td>'}).join('')+'</tr>').join(''):'<tr><td colspan="'+(maxDays+1)+'" style="padding:20px;color:#a7b5ce">No daily activities found. Use Add habit below.</td></tr>';
+ const absent=Array.from({length:maxDays},(_,i)=>i+1).filter(day=>!m.dayColumns.includes(day));
+ $('month-days-note').textContent=absent.length?'Day'+(absent.length>1?'s ':' ')+absent.join(', ')+' missing from the Notion database · disabled in Lexicon':'Every available day is synced with Notion';
+ $('month-add-habit-form').hidden=!m.sourceId;
+ renderMonthResults();
+}
+function renderMonthResults(){
+ if(!monthState)return;
+ $('month-results-grid').innerHTML=Object.entries(monthState.results).map(([key,section])=>{
+  const valid=!!section.headingId;
+  const items=section.entries.filter(entry=>entry.text.trim());
+  return '<article class="month-result-col"><div class="month-result-head"><span>'+section.icon+' '+esc(section.label)+'</span><span class="month-result-count">'+items.length+' entries</span></div>'+
+  '<ul class="month-result-list">'+(items.length?items.map(entry=>'<li>'+esc(entry.text)+'</li>').join(''):'<li>No entries recorded yet</li>')+'</ul>'+
+  (valid?'<form class="month-result-form" data-month-result="'+esc(key)+'"><input maxlength="2000" aria-label="Add '+esc(section.label)+' entry" placeholder="'+(key==='Film'?'Film title, rating, notes…':key==='Romanzi'?'Book or novel title…':'Speaking notes…')+'"/><button type="submit" class="month-small-button">＋ Add</button></form>':'<p class="month-helper">Create this section in Notion to add entries.</p>')+
+  '</article>';
+ }).join('');
+}
+async function setMonthGoal(id,done){
+ const state=monthState,goal=state?.goals.find(g=>g.id===id);
+ if(!goal||monthWrites.has('goal:'+id))return;
+ const key='goal:'+id,prior=goal.done;monthWrites.add(key);
+ goal.done=done;renderMonthWorkspace();
+ try{await notion('PATCH','/blocks/'+encodeURIComponent(id),{to_do:{checked:done}});toast('Monthly goal saved to Notion ✓')}
+ catch(err){goal.done=prior;toast('Could not save priority: '+err.message)}
+ finally{monthWrites.delete(key);if(monthState===state)renderMonthWorkspace()}
+}
+async function setMonthDay(rowId,day,checked){
+ const state=monthState,row=state?.rows.find(r=>r.id===rowId);
+ if(!row||!state.dayColumns.includes(day)||monthWrites.has(rowId+':'+day))return;
+ const key=rowId+':'+day,prior=row.days[day];monthWrites.add(key);
+ row.days[day]=checked;renderMonthWorkspace();
+ try{
+  await notion('PATCH','/pages/'+encodeURIComponent(rowId),{properties:{[String(day)]:{checkbox:checked}}});
+  toast('Daily habit saved ✓');
+ }catch(err){row.days[day]=prior;toast('Could not save daily habit: '+err.message)}
+ finally{monthWrites.delete(key);if(monthState===state)renderMonthWorkspace()}
+}
+async function addMonthGoal(event){
+ event.preventDefault();if(!monthState)return;
+ const input=$('month-add-goal'),value=input.value.trim();if(!value)return;
+ const button=$('month-add-goal-form').querySelector('button');button.disabled=true;
+ try{
+  const anchor=monthState.blocks.filter(b=>b.type==='to_do').at(-1)?.id;
+  const body={children:[{object:'block',type:'to_do',to_do:{rich_text:[{type:'text',text:{content:value}}],checked:false}}]};
+  if(anchor)body.after=anchor;
+  await notion('PATCH','/blocks/'+encodeURIComponent(monthState.id)+'/children',body);
+  input.value='';await loadMonthPage(monthState.id);toast('Priority added to Notion ✓');
+ }catch(err){toast('Could not add monthly priority: '+err.message)}
+ finally{button.disabled=false}
+}
+async function addMonthHabit(event){
+ event.preventDefault();if(!monthState?.sourceId)return;
+ const input=$('month-add-habit'),value=input.value.trim();if(!value)return;
+ const button=$('month-add-habit-form').querySelector('button');button.disabled=true;
+ try{
+  await notion('POST','/pages',{parent:{type:'data_source_id',data_source_id:monthState.sourceId},properties:{Resources:{title:[{type:'text',text:{content:value}}]}}});
+  input.value='';await loadMonthPage(monthState.id);toast('Habit added to Notion ✓');
+ }catch(err){toast('Could not add habit: '+err.message)}
+ finally{button.disabled=false}
+}
+async function addMonthResult(event){
+ const form=event.target.closest('form[data-month-result]');if(!form)return;
+ event.preventDefault();const key=form.dataset.monthResult,section=monthState?.results?.[key];
+ const input=form.querySelector('input'),value=input?.value.trim();if(!section?.headingId||!value)return;
+ const button=form.querySelector('button');button.disabled=true;
+ try{
+  const body={children:[{object:'block',type:'bulleted_list_item',bulleted_list_item:{rich_text:[{type:'text',text:{content:value}}]}}]};
+  body.after=section.lastId||section.headingId;
+  await notion('PATCH','/blocks/'+encodeURIComponent(monthState.id)+'/children',body);
+  input.value='';await loadMonthPage(monthState.id);toast(key+' added to Notion ✓');
+ }catch(err){toast('Could not add result: '+err.message)}
+ finally{button.disabled=false}
+}
+
 function parseDate(s){if(!s)return null;const d=new Date(String(s));return Number.isNaN(d.getTime())?null:d}
 $('date-label').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-$('import').onclick=()=>loadWords();
+
+$('month-root-input').value=monthRootId;
+$('month-connect-form').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const id=normalizeMonthId($('month-root-input').value);
+ if(!id){$('month-connect-error').textContent='Please paste a valid Notion page link or ID.';return}
+ monthRootId=id;monthState=null;
+ await loadAvailableMonths();
+});
+$('month-edit-connection').onclick=()=>{
+ $('month-connection').hidden=false;
+ $('month-root-input').value=monthRootId;
+ $('month-data').hidden=true;
+ $('month-connect-error').textContent='';
+};
+$('month-refresh').onclick=()=>monthRootId?loadAvailableMonths(monthState?.id):$('month-connection').hidden=false;
+$('month-picker').onchange=()=>loadMonthPage($('month-picker').value);
+$('month-add-goal-form').addEventListener('submit',addMonthGoal);
+$('month-add-habit-form').addEventListener('submit',addMonthHabit);
+$('month-results-grid').addEventListener('submit',addMonthResult);
+$('month-priorities-list').addEventListener('change',e=>{if(e.target.matches('[data-month-goal]'))setMonthGoal(e.target.dataset.monthGoal,e.target.checked)});
+for(const id of ['month-today-habits','month-table-body']){
+ $(id).addEventListener('change',e=>{
+  const input=e.target.closest('[data-month-cell]');
+  if(input&&!input.disabled)setMonthDay(input.dataset.monthCell,Number(input.dataset.day),input.checked);
+ });
+}
+
+$('import').onclick=()=>activeWorkspace==='monthly'?(monthRootId?loadAvailableMonths(monthState?.id):$('month-connection').hidden=false):loadWords();
  $('enable-history').onclick=enableReviewHistory;
  $('add-word').onclick=openAddWord;
  $('add-close').onclick=()=>$('add-overlay').classList.remove('open');
@@ -1438,7 +1725,13 @@ $('close').onclick=closeReviewFlashcard;
 $('forgot').onclick=()=>act('forgot');$('remembered').onclick=()=>act('remember');$('master-word').onclick=()=>act('master');
 $('queue-more').onclick=()=>{queueLimit+=30;render()};
  $('search').oninput=e=>{search=e.target.value.toLowerCase().trim();queueLimit=24;render()};document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;queueLimit=24;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()});document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;document.querySelectorAll('[data-lang]').forEach(x=>x.classList.toggle('selected',x===b));render()});
- document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-nav]').forEach(x=>x.classList.toggle('active',x===b));const n=b.dataset.nav;if(n==='mastered'){filter='mastered';document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x.dataset.filter==='mastered'));render();$('queue').scrollIntoView({behavior:'smooth'})}else if(n==='queue'){$('queue').scrollIntoView({behavior:'smooth'})}else $(n).scrollIntoView({behavior:'smooth'})});
+ document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{
+ const n=b.dataset.nav;
+ if(n==='monthly'){showWorkspace('monthly');return}
+ showWorkspace('vocabulary',n);
+ if(n==='mastered'){filter='mastered';document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x.dataset.filter==='mastered'));render();$('queue').scrollIntoView({behavior:'smooth'})}
+ else if(n==='queue'||n==='analytics')$(n).scrollIntoView({behavior:'smooth'});
+});
  $('login-form').onsubmit=async e=>{
   e.preventDefault();
   sourceId=$('notion-source').value.trim();
