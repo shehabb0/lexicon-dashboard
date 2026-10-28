@@ -78,7 +78,7 @@
   <div class="practice-header"><div><label for="tense-select" class="practice-label">Choose the tense to practise</label><select id="tense-select" aria-label="Tense to practise"></select></div><button type="button" class="practice-switch" id="switch-conjugation-view">View original tables</button></div>
   <p class="practice-question">Enter the form for each person. You only have to practise the tense you select.</p>
   <form id="conjugation-practice-form"><div id="practice-fields" class="practice-grid"></div>
-    <div class="practice-footer"><button class="quiz-check" id="check-conjugation" type="submit">✓ Check conjugation</button><button class="quiz-secondary" id="retry-conjugation" type="button">Try again</button></div>
+    <div class="practice-footer"><button class="quiz-check" id="check-conjugation" type="submit">✓ Check conjugation</button><button class="quiz-secondary" id="retry-conjugation" type="button">Try again</button><button class="practice-switch" id="reveal-conjugation-answers" type="button" hidden aria-expanded="false">👁 Show correct answers</button></div>
     <div id="practice-summary" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
   </form>
   <p class="practice-notice">Checked against your Notion table. Exercises don't change your Class or mark a review complete.</p>
@@ -690,6 +690,7 @@ function renderPracticeFields(){
  $('practice-summary').hidden=true;
  $('practice-summary').textContent='';
  $('practice-summary').className='quiz-feedback';
+ resetConjugationAnswerReveal();
  if(!ex){
   area.innerHTML='<p class="conjugation-hint">This verb has no practiceable Notion table. Use “View original tables” to inspect the content, or open it in Notion.</p>';
   return;
@@ -703,12 +704,48 @@ function resetConjugationPractice(){
  renderPracticeFields();
  const first=$('practice-fields').querySelector('input');if(first)first.focus();
 }
+function resetConjugationAnswerReveal(){
+ const button=$('reveal-conjugation-answers');
+ button.hidden=true;
+ button.setAttribute('aria-expanded','false');
+ button.textContent='👁 Show correct answers';
+}
+function revealConjugationAnswers(){
+ const button=$('reveal-conjugation-answers');
+ const ex=practiceExercises.find(x=>x.id===$('tense-select').value);
+ if(!ex||button.hidden)return;
+ const show=button.getAttribute('aria-expanded')!=='true';
+ button.setAttribute('aria-expanded',String(show));
+ button.textContent=show?'🙈 Hide correct answers':'👁 Show correct answers';
+ $('practice-fields').querySelectorAll('.practice-result').forEach(label=>{
+  const state=label.dataset.status;
+  if(!['close','wrong','blank'].includes(state))return;
+  const index=Number(label.dataset.index);
+  const item=ex.entries[index];
+  if(!item)return;
+  label.textContent=show?'Notion: '+item.form:state==='close'?'△ Almost there':state==='blank'?'✕ Not answered':'✕ Incorrect';
+ });
+}
+function clearPracticeGrades(){
+ if($('practice-summary').hidden)return;
+ $('practice-summary').hidden=true;
+ $('practice-summary').textContent='';
+ $('practice-summary').className='quiz-feedback';
+ for(const field of $('practice-fields').querySelectorAll('.practice-answer'))field.classList.remove('correct','incorrect');
+ for(const label of $('practice-fields').querySelectorAll('.practice-result')){
+  label.textContent='';
+  label.className='practice-result';
+  delete label.dataset.status;
+ }
+ resetConjugationAnswerReveal();
+}
 function gradeConjugation(e){
  e.preventDefault();
  const ex=practiceExercises.find(x=>x.id===$('tense-select').value);if(!ex)return;
  const boxes=[...$('practice-fields').querySelectorAll('.practice-answer')];
  if(!boxes.some(input=>input.value.trim())){boxes[0]?.focus();return}
  let correct=0,close=0,wrong=0;
+ resetConjugationAnswerReveal();
  for(const field of boxes){
   const i=Number(field.dataset.index),item=ex.entries[i];
   if(!item)continue;
@@ -716,16 +753,19 @@ function gradeConjugation(e){
   const status=outcome.state;
   const label=$('practice-result-'+i);
   field.classList.remove('correct','incorrect');
+  label.dataset.status=status;
+  label.dataset.index=String(i);
   if(status==='correct'){correct++;field.classList.add('correct');label.className='practice-result good';label.textContent='✓ Correct'}
   else{
    if(status==='close')close++;else wrong++;
    field.classList.add('incorrect');label.className='practice-result bad';
-   label.textContent=(status==='close'?'Almost. ':'')+'Notion: '+item.form;
+   label.textContent=status==='close'?'△ Almost there':status==='blank'?'✕ Not answered':'✕ Incorrect';
   }
  }
  const summary=$('practice-summary');summary.hidden=false;
  summary.className='quiz-feedback '+(correct===ex.entries.length?'ok':correct||close?'close':'wrong');
- summary.textContent=correct+' / '+ex.entries.length+' correct'+(close?' · '+close+' nearly correct':'')+(correct===ex.entries.length?' — Excellent! ✦':'. Review the highlighted forms and try again.');
+ summary.textContent=correct+' / '+ex.entries.length+' correct'+(close?' · '+close+' nearly correct':'')+(correct===ex.entries.length?' — Excellent! ✦':'. Try again or reveal the correct answers when you are ready.');
+ $('reveal-conjugation-answers').hidden=correct===ex.entries.length;
 }
 async function showConjugation(wordId,force=false,mode='view'){
  const word=list.find(w=>w.id===wordId);
@@ -813,6 +853,8 @@ $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('tense-select').onchange=renderPracticeFields;
  $('conjugation-practice-form').addEventListener('submit',gradeConjugation);
  $('retry-conjugation').onclick=resetConjugationPractice;
+ $('reveal-conjugation-answers').onclick=revealConjugationAnswers;
+ $('practice-fields').addEventListener('input',e=>{if(e.target.classList.contains('practice-answer'))clearPracticeGrades()});
  $('conjugation-close').onclick=closeConjugation;
  $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true,conjugationMode)};
  $('conjugation-overlay').onclick=e=>{if(e.target===$('conjugation-overlay'))closeConjugation()};
