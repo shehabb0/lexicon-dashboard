@@ -46,6 +46,11 @@
 .month-results-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.month-result-col{border:1px solid #3c4560;background:#101d30;border-radius:13px;padding:16px;min-width:0}.month-result-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:780;font-size:13px;color:#e7dbff}.month-result-count{font-size:10px;color:#b19fcb}.month-result-list{min-height:75px;padding-left:18px;color:#adbad2;font-size:11px;line-height:1.65;overflow-wrap:anywhere}.month-result-list li{margin:7px 0}.month-result-form{display:flex;gap:5px;margin-top:12px}.month-result-form input{padding:9px 10px;font-size:10px;flex:1;min-width:0;background:#0c1727;border:1px solid #49506a;color:#e5f0ff;border-radius:8px}.month-result-form button{font-size:10px}.month-results-panel{margin-bottom:17px}.month-footer-note{margin-bottom:30px}
 @media(max-width:1020px){.month-panel-grid{grid-template-columns:1fr}.month-results-grid{grid-template-columns:1fr}.month-hero{flex-wrap:wrap}}
 @media(max-width:600px){.month-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.month-summary-card:last-child{grid-column:span 2}.month-hero{padding:22px}.month-topbar{align-items:flex-start;flex-direction:column}.month-hero-actions{flex-wrap:wrap}.month-panel{padding:16px}.month-table-foot .month-inline-form{max-width:100%}}
+.flash .translation.hidden,.flash .example.hidden{visibility:hidden}
+.reverse-switch{color:#d4c6ff;border-color:#60548c;background:#221d37;transition:background .16s,border-color .16s}
+.reverse-switch[aria-pressed="true"]{background:#4f447f;border-color:#b7a3ff;color:#fff;box-shadow:0 0 0 1px #a99cff22}
+.reverse-switch:hover{background:#3a335b;color:#fff}
+@media(max-width:920px){.topright{flex-wrap:wrap;justify-content:flex-end}.reverse-switch{padding:10px 12px}}
 </style>
 </head>
 <body>
@@ -76,7 +81,7 @@
   <div class="sidebar-foot"><div class="mini-card"><span style="color:var(--mint);font-size:10px;font-weight:850;letter-spacing:1px">YOUR JOURNEY ✦</span><strong style="display:block;margin-top:7px">One word at a time.</strong><p>Consistency turns new words into a second language.</p><div class="track"><div class="fill" id="side-progress"></div></div></div><div class="sidebar-bottom">✦ Designed for curious minds</div></div>
 </aside>
 <main class="main" id="overview">
- <header class="topbar"><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <button class="import-btn" id="import">↻ Refresh Notion</button><div class="avatar" title="Lexicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lexicon blue and coral L" width="42" height="42">
+ <header class="topbar"><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn reverse-switch" type="button" id="reverse-mode" aria-pressed="false" title="Show the translation first and type the original word">⇄ Reverse: OFF</button><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <button class="import-btn" id="import">↻ Refresh Notion</button><div class="avatar" title="Lexicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lexicon blue and coral L" width="42" height="42">
 <defs><linearGradient id="lx-top-b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#2258C7"/></linearGradient><linearGradient id="lx-top-c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFA88E"/><stop offset="1" stop-color="#FF7A59"/></linearGradient></defs>
 <rect width="64" height="64" rx="17" fill="#F8FAFC"/>
 <path d="M15 15c0-6 4.4-10.4 10-10.4S35 9 35 15v23h11c5.8 0 10 4.6 10 10.3S51.8 58.5 46 58.5H25c-5.8 0-10-4.4-10-10.2V15Z" fill="url(#lx-top-b)"/>
@@ -98,7 +103,7 @@
   <article class="panel"><div class="panel-head"><div><h2>Study consistency</h2><div class="subtitle" id="heat-sub">Your recent learning days</div></div><div class="chip">12 weeks</div></div><div class="heatmap-grid" id="heatmap"></div><div class="heatcaption"><span>Less</span><span class="sq" style="background:#1d2a3c"></span><span class="sq" style="background:#285a54"></span><span class="sq" style="background:#397b69"></span><span class="sq" style="background:#5bc29b"></span><span class="sq" style="background:#9af2c7"></span><span>More</span><span class="heat-caption-tail" id="streakline"></span></div></article>
   <article class="panel"><div class="panel-head"><div><h2>Learning levels</h2><div class="subtitle">Where your vocabulary stands</div></div><div class="chip">Classes 1–10</div></div><div style="margin:9px 0 2px;font-size:11px;color:#99adc4">Filter by language</div><div class="tagcloud"><button class="language-chip selected" data-lang="All">✦ All languages</button><button class="language-chip" data-lang="French">🇫🇷 French</button><button class="language-chip" data-lang="Italian">🇮🇹 Italian</button></div><div id="class-chart"></div></article>
  </section>
- <section class="queue" id="queue"><div class="queue-head"><div><div class="queue-title">Your review queue <span style="color:var(--mint)">✦</span></div><div class="queue-sub">The next words worth your attention.</div></div><div class="controls"><button class="filter active" data-filter="due">Due now</button><button class="filter" data-filter="words">All words</button><button class="filter" data-filter="verbs">All verbs</button><button class="filter" data-filter="grammar">Grammar</button><button class="filter" data-filter="everything">Everything</button><button class="filter" data-filter="mastered">Mastered</button><input class="search" id="search" placeholder="⌕  Search vocabulary" aria-label="Search vocabulary" /></div></div><div class="queue-card"><div class="qrow header"><div>Word / phrase</div><div>Translation</div><div>Status</div><div>Level</div><div>Action</div></div><div id="queue-rows"></div></div><div style="text-align:center;padding:14px 0 4px"><button id="queue-more" type="button" class="import-btn" hidden>Show more words ↓</button></div><div class="bottom-note"><span id="rows-count">Showing words</span><span>Synced with Notion · refreshes every minute</span></div></section>
+ <section class="queue" id="queue"><div class="queue-head"><div><div class="queue-title">Your review queue <span style="color:var(--mint)">✦</span></div><div class="queue-sub">The next words worth your attention.</div></div><div class="controls"><button class="filter active" data-filter="due">Due now</button><button class="filter" data-filter="words">All words</button><button class="filter" data-filter="verbs">All verbs</button><button class="filter" data-filter="grammar">Grammar</button><button class="filter" data-filter="everything">Everything</button><button class="filter" data-filter="mastered">Mastered</button><input class="search" id="search" placeholder="⌕  Search vocabulary" aria-label="Search vocabulary" /></div></div><div class="queue-card"><div class="qrow header"><div id="queue-prompt-label">Word / phrase</div><div id="queue-answer-label">Translation</div><div>Status</div><div>Level</div><div>Action</div></div><div id="queue-rows"></div></div><div style="text-align:center;padding:14px 0 4px"><button id="queue-more" type="button" class="import-btn" hidden>Show more words ↓</button></div><div class="bottom-note"><span id="rows-count">Showing words</span><span>Synced with Notion · refreshes every minute</span></div></section>
  <div style="text-align:center;color:#4e617f;margin-top:38px;font-size:10px;letter-spacing:2px">LEXICON STUDIO · LEARN BEAUTIFULLY</div>
 
  </div>
@@ -152,7 +157,7 @@
 </main></div>
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="Vocabulary flashcard"><div class="flash flashcard-scroll"><button class="close" id="close" aria-label="Close">×</button><div class="flash-label" id="flash-label">FRENCH · CLASS 1</div><h3 id="flash-word">Bonjour</h3><div id="flash-answer" class="translation hidden" aria-hidden="true">Good morning</div><div id="flash-example" class="example hidden" aria-hidden="true"></div><div class="study-tools"><button id="flip" class="toggle">Reveal translation</button><button id="show-conjugation" class="toggle conjugation-button" type="button" hidden>📖 Show Conjugation</button><button id="practice-conjugation" class="toggle conjugation-button" type="button" hidden>✍ Practice Conjugation</button><button id="study-grammar" class="toggle grammar-launch" type="button" hidden>📚 Study Grammar</button></div>
 <div class="quiz-panel" id="translation-quiz">
- <h4 class="quiz-title">✍ Test your translation</h4><p class="quiz-caption">Write the meaning from memory, then check it against your Notion translation.</p>
+ <h4 class="quiz-title" id="translation-quiz-title">✍ Test your translation</h4><p class="quiz-caption" id="translation-quiz-caption">Write the meaning from memory, then check it against your Notion translation.</p>
  <form id="translation-quiz-form">
   <label for="translation-attempt" class="practice-label">Your answer</label>
   <input id="translation-attempt" class="quiz-input" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Type your translation here…" maxlength="2000" aria-label="Type your translation"/>
@@ -295,6 +300,24 @@ const conjugationCache=new Map();
 let grammarWordId=null,grammarRequest=0,grammarMode='read',grammarLesson=null;
 const grammarCache=new Map();
 const peekedTranslations=new Set();
+const REVERSE_STORAGE_KEY='lexicon_reverse_study';
+let reverseStudy=false;
+try{reverseStudy=localStorage.getItem(REVERSE_STORAGE_KEY)==='true'}catch(err){console.warn('Could not read reverse preference',err)}
+function reversedWord(w){return reverseStudy&&typeKind(w.type)!=='grammar'&&!!String(w.meaning||'').trim()}
+function updateReverseSwitch(){
+ const button=$('reverse-mode');if(!button)return;
+ button.setAttribute('aria-pressed',String(reverseStudy));
+ button.textContent=reverseStudy?'⇄ Reverse: ON':'⇄ Reverse: OFF';
+ button.title=reverseStudy?'Show the original words and answer from translations · Click to turn off':'Show translations first and type original words · Click to turn on';
+ $('queue-prompt-label').textContent=reverseStudy?'Translation / meaning':'Word / phrase';
+ $('queue-answer-label').textContent=reverseStudy?'Original word':'Translation';
+}
+function toggleReverseMode(){
+ reverseStudy=!reverseStudy;
+ try{localStorage.setItem(REVERSE_STORAGE_KEY,String(reverseStudy))}catch(err){}
+ peekedTranslations.clear();updateReverseSwitch();render();
+ if(selectedId&&$('overlay').classList.contains('open'))openWord(selectedId,!!reviewSession);
+}
 let dataSourceSchema=null, schemaSourceId='';
 const SETTINGS_KEY='lexicon_notion_browser_connection';
 let notionToken='', sourceId='';
@@ -324,7 +347,7 @@ function filtered(){
 function render(){const total=list.length,master=list.filter(w=>w.mastered||w.difficulty==='Learned').length,due=dueWords().length,late=activeWords().filter(w=>w.next&&dayDiff(w.next)<0).length,pct=total?Math.round(master/total*100):0;
  $('total').textContent=total;$('mastered').textContent=master;$('due').textContent=due;$('overdue').textContent=late;$('side-due').textContent=due;$('mastered-note').textContent=pct+'% of your collection';$('donut').style.setProperty('--degree',pct+'%');$('donut-value').textContent=pct+'%';$('progress-numbers').textContent=master+' / '+total;$('progress-bar').style.width=pct+'%';$('side-progress').style.width=pct+'%';$('progress-label').textContent=pct>75?'Beautiful progress ✦':pct>30?'Making steady progress ✦':'Every word counts ✦';
  $('class-chart').innerHTML=Array.from({length:10},(_,i)=>{const n=list.filter(w=>w.klass===i+1&&(lang==='All'||w.lang===lang)&&!w.mastered).length;const max=Math.max(...Array.from({length:10},(_,z)=>list.filter(w=>w.klass===z+1&&(lang==='All'||w.lang===lang)&&!w.mastered).length),1);return `<div class="class-row"><span class="name">Class ${i+1}</span><div class="track"><div class="fill" style="width:${(n/max)*100}%"></div></div><span class="value">${n}</span></div>`}).join('');
- const shown=filtered();$('queue-rows').innerHTML=shown.length?shown.slice(0,queueLimit).map(w=>{const [s,label]=getStatus(w);return `<div class="qrow"><div><div class="word-name">${esc(w.word)}</div><div class="word-meta"><span class="lang-dot" style="background:${w.lang==='French'?'#a89bff':'#83eccb'}"></span>${esc(w.lang)} · ${esc(w.type||'Word')}</div></div><div class="meaning ${peekedTranslations.has(w.id)?'':'masked'}"><span>${peekedTranslations.has(w.id)?esc(w.meaning||'No translation'):'••••••'}</span><button type="button" class="peek" data-peek="${esc(w.id)}" aria-label="${peekedTranslations.has(w.id)?'Hide':'Show'} translation for ${esc(w.word)}">${peekedTranslations.has(w.id)?'Hide':'Show'}</button></div><div><span class="status ${s}">${esc(label)}</span></div><div style="font-size:11px;color:#b8c8dd">Class ${w.klass}</div><div><button class="action" data-open="${w.id}">${typeKind(w.type)==='grammar'?'Study →':w.mastered?'View':'Review →'}</button></div></div>`}).join(''):`<div class="empty-state">✦ No words in this view. You're all caught up!</div>`;$('rows-count').textContent=`Showing ${Math.min(shown.length,queueLimit)} of ${shown.length} matching words`;$('queue-more').hidden=shown.length<=queueLimit;
+ const shown=filtered();$('queue-rows').innerHTML=shown.length?shown.slice(0,queueLimit).map(w=>{const [s,label]=getStatus(w);const rev=reversedWord(w),promptText=rev?w.meaning:w.word,answerText=rev?w.word:w.meaning;return `<div class="qrow"><div><div class="word-name">${esc(promptText)}</div><div class="word-meta"><span class="lang-dot" style="background:${w.lang==='French'?'#a89bff':'#83eccb'}"></span>${esc(w.lang)} · ${esc(w.type||'Word')}${rev?' · REVERSE':''}</div></div><div class="meaning ${peekedTranslations.has(w.id)?'':'masked'}"><span>${peekedTranslations.has(w.id)?esc(answerText||'No translation'):'••••••'}</span><button type="button" class="peek" data-peek="${esc(w.id)}" aria-label="${peekedTranslations.has(w.id)?'Hide':'Show'} ${rev?'original word':'translation'} for ${esc(promptText)}">${peekedTranslations.has(w.id)?'Hide':'Show'}</button></div><div><span class="status ${s}">${esc(label)}</span></div><div style="font-size:11px;color:#b8c8dd">Class ${w.klass}</div><div><button class="action" data-open="${w.id}">${typeKind(w.type)==='grammar'?'Study →':w.mastered?'View':'Review →'}</button></div></div>`}).join(''):`<div class="empty-state">✦ No words in this view. You're all caught up!</div>`;$('rows-count').textContent=`Showing ${Math.min(shown.length,queueLimit)} of ${shown.length} matching words`;$('queue-more').hidden=shown.length<=queueLimit;
  document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>openWord(b.dataset.open)));
   document.querySelectorAll('[data-peek]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.peek;if(peekedTranslations.has(id))peekedTranslations.delete(id);else peekedTranslations.add(id);render()}));
  renderActivity();renderHeat();
@@ -474,17 +497,18 @@ function resetTranslationPractice(word){
  $('check-translation').disabled=false;
  $('translation-attempt').disabled=false;
  $('translation-attempt').readOnly=false;
- $('translation-attempt').placeholder='Type your translation here…';
+ $('translation-attempt').placeholder=word&&reversedWord(word)?'Type the '+(word.lang||'original')+' word…':'Type your translation here…';
 }
 function toggleTranslationAnswer(){
  const button=$('reveal-translation-answer');
  if(button.hidden)return;
  const word=list.find(w=>w.id===selectedId);
  if(!word?.meaning?.trim())return;
+ const reversed=reversedWord(word);
  const answer=$('translation-correct-answer');
  const reveal=button.getAttribute('aria-expanded')!=='true';
  answer.hidden=!reveal;
- answer.textContent=reveal?'Notion answer: '+word.meaning:'';
+ answer.textContent=reveal?'Notion answer: '+(reversed?word.word:word.meaning):'';
  button.setAttribute('aria-expanded',String(reveal));
  button.textContent=reveal?'🙈 Hide correct answer':'👁 Show correct answer';
 }
@@ -500,11 +524,12 @@ function checkTranslation(e){
   fb.textContent='Your answer was entered, but I could not find a reference translation in Notion for this word. Check its Translation property to enable grading.';
   return;
  }
- const result=evaluateAnswer(typed,word.meaning,'translation');
+ const reversed=reversedWord(word);
+ const result=evaluateAnswer(typed,reversed?word.word:word.meaning,reversed?'reverse':'translation');
  const feedback=$('translation-feedback');feedback.hidden=false;
  feedback.className='quiz-feedback '+(result.state==='correct'?'ok':result.state==='close'?'close':'wrong');
  if(result.state==='correct'){
-  feedback.textContent='✓ Correct! Your translation matches Notion.';
+  feedback.textContent=reversed?'✓ Correct! You remembered the original word.':'✓ Correct! Your translation matches Notion.';
  }else{
   feedback.textContent=result.state==='close'?'△ Almost there! '+result.reason+' Try again or reveal the correct answer.':'✕ Not quite. Try again or reveal the correct answer.';
   $('reveal-translation-answer').hidden=false;
@@ -534,15 +559,18 @@ function openWord(id,fromReviewSession=false){
  selectedId=id;
  const isGrammar=typeKind(w.type)==='grammar';
  const progress=fromReviewSession&&reviewSession?` · REVIEW ${reviewSession.completed+1} / ${reviewSession.total}`:'';
- $('flash-label').textContent=w.lang.toUpperCase()+' · CLASS '+w.klass+progress;
- $('flash-answer').textContent=w.meaning;
- $('flash-word').textContent=w.word;
+ const reversed=reversedWord(w);
+ $('flash-label').textContent=w.lang.toUpperCase()+' · CLASS '+w.klass+(reversed?' · REVERSE':'')+progress;
+ $('flash-answer').textContent=reversed?w.word:w.meaning;
+ $('flash-word').textContent=reversed?w.meaning:w.word;
  $('flash-example').textContent=w.example||'';
  $('flash-answer').classList.add('hidden');
  $('flash-answer').setAttribute('aria-hidden','true');
  $('flash-example').classList.add('hidden');
  $('flash-example').setAttribute('aria-hidden','true');
- $('flip').textContent='Reveal translation';
+ $('flip').textContent=reversed?'Reveal original word':'Reveal translation';
+ $('translation-quiz-title').textContent=reversed?'✍ Write the original word':'✍ Test your translation';
+ $('translation-quiz-caption').textContent=reversed?'Read the translation and type the '+(w.lang||'original language')+' word from memory. Alternative forms are accepted.':'Write the meaning from memory, then check it against your Notion translation.';
  resetTranslationPractice(w);
  $('show-conjugation').hidden=typeKind(w.type)!=='verb';
  $('practice-conjugation').hidden=typeKind(w.type)!=='verb';
@@ -1754,7 +1782,9 @@ $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('conjugation-close').onclick=closeConjugation;
  $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true,conjugationMode)};
  $('conjugation-overlay').onclick=e=>{if(e.target===$('conjugation-overlay'))closeConjugation()};
- $('flip').onclick=()=>{const a=$('flash-answer'),ex=$('flash-example');const hidden=a.classList.toggle('hidden');ex.classList.toggle('hidden',hidden);a.setAttribute('aria-hidden',String(hidden));ex.setAttribute('aria-hidden',String(hidden));$('flip').textContent=hidden?'Reveal translation':'Hide translation'};
+ $('flip').onclick=()=>{const a=$('flash-answer'),ex=$('flash-example');const hidden=a.classList.toggle('hidden');ex.classList.toggle('hidden',hidden);a.setAttribute('aria-hidden',String(hidden));ex.setAttribute('aria-hidden',String(hidden));const w=list.find(w=>w.id===selectedId),direction=w&&reversedWord(w)?'original word':'translation';$('flip').textContent=hidden?'Reveal '+direction:'Hide '+direction};
+$('reverse-mode').onclick=toggleReverseMode;
+ updateReverseSwitch();
 $('close').onclick=closeReviewFlashcard;
  $('overlay').onclick=e=>{if(e.target===$('overlay'))closeReviewFlashcard()};
  $('review-complete-close').onclick=()=>$('review-complete-overlay').classList.remove('open');
