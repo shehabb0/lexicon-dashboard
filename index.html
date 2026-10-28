@@ -424,21 +424,55 @@ function normalizeAnswer(value){
   .replace(/\s+/g,' ').trim();
 }
 function withoutAccents(value){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function splitAnswerAlternatives(value){
+ // A slash, a comma, a semicolon, a pipe, a line break, or a spaced dash can separate valid equivalents.
+ // Do not split ordinary compounds such as "porte-monnaie".
+ return String(value??'').split(/\s*(?:\/|[;,|]|\r?\n|\s+[-–—]\s+|\s+(?:or|ou|oppure)\s+)\s*/i).map(v=>v.trim()).filter(Boolean);
+}
 function translationVariants(reference){
  const raw=String(reference??'').trim();
- const candidates=new Set([raw]);
- const pieces=raw.split(/\s*(?:[\r\n;|,]| \/ |\s+or\s+|\s+ou\s+)\s*/i).map(x=>x.trim()).filter(Boolean);
- for(const part of pieces)candidates.add(part);
+ const parts=splitAnswerAlternatives(raw);
+ const candidates=new Set([raw,...parts]);
+ if(parts.length>1&&parts.length<=5){
+  candidates.add(parts.join(' '));       // "Fils Fille"
+  candidates.add(parts.join(' / '));     // "Fils / Fille"
+  candidates.add(parts.join('/'));       // "Fils/Fille"
+  candidates.add(parts.join(' - '));     // "Fils - Fille"
+  candidates.add(parts.join(' – '));
+  if(parts.length===2){
+   candidates.add(parts[1]+' '+parts[0]); // Alternate order of two accepted equivalents
+   candidates.add(parts[1]+' / '+parts[0]);
+   candidates.add(parts[1]+' - '+parts[0]);
+  }
+ }
  for(const part of [...candidates]){
   const unannotated=part.replace(/\s*\([^()]*\)\s*/g,' ').trim();
   if(unannotated)candidates.add(unannotated);
   const prefixed=part.replace(/^(?:translation|traduction|traduzione|meaning|answer|fran[cç]ais|french)\s*[:：]\s*/i,'').trim();
   if(prefixed)candidates.add(prefixed);
  }
- return [...candidates].map(normalizeAnswer).filter(Boolean);
+ return [...new Set([...candidates].map(normalizeAnswer).filter(Boolean))];
+}
+function reverseWordVariants(reference){
+ const raw=String(reference??'').trim();
+ const parts=splitAnswerAlternatives(raw);
+ const all=new Set([raw,...parts]);
+ // Notion commonly abbreviates Italian masculine/feminine pairs: "figlio/a" = figlio or figlia.
+ const gender=raw.match(/^(.+?)([oaie])\/([oaie])$/i);
+ if(gender){
+  all.add(gender[1]+gender[2]);
+  all.add(gender[1]+gender[3]);
+ }
+ if(parts.length>1&&parts.length<=5){
+  all.add(parts.join(' '));
+  all.add(parts.join(' / '));
+  all.add(parts.join(' - '));
+ }
+ return [...new Set([...all].map(normalizeAnswer).filter(Boolean))];
 }
 function answerVariants(reference,kind='translation',prompt=''){
- if(kind==='translation')return [...new Set(translationVariants(reference))];
+ if(kind==='translation')return translationVariants(reference);
+ if(kind==='reverse')return reverseWordVariants(reference);
  const values=String(reference||'').split(/\s*(?:[\n;]|\s\/\s|\s+or\s+)\s*/i).filter(Boolean);
  const all=new Set([String(reference||'').trim(),...values]);
  if(kind==='conjugation'){
