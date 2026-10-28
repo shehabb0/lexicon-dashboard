@@ -65,6 +65,9 @@
 .grammar-modal.word-table-compact .grammar-question .practice-answer{padding:7px 10px;min-height:34px;font-size:12px;border-radius:7px}
 .grammar-modal.word-table-compact .grammar-feedback{font-size:10px;margin-top:3px}
 @media(max-width:600px){.grammar-modal.word-table-compact .table-practice-row{grid-template-columns:1fr;row-gap:6px}.grammar-modal.word-table-compact .grammar-question{padding:9px 10px}}
+#table-review-footer[hidden],#table-review-notice[hidden]{display:none!important}
+.grammar-modal.word-table-compact #table-review-footer{margin-top:12px;padding-top:11px;gap:10px}
+.grammar-modal.word-table-compact #table-review-notice{margin:7px 0 0}
 </style>
 </head>
 <body>
@@ -238,6 +241,11 @@
    </div>
    <div class="quiz-feedback" id="grammar-score" role="status" aria-live="polite" hidden></div>
   </form>
+  <div class="practice-footer practice-review-footer" id="table-review-footer" hidden>
+   <button type="button" id="table-mark-reviewed" class="modalbutton green">✓ Mark Reviewed</button>
+   <span class="practice-review-hint">Save this table's review to Notion and continue to the next due item.</span>
+  </div>
+  <p class="practice-notice" id="table-review-notice" hidden>Checking table answers is practice only. Mark Reviewed saves your review and updates your Notion schedule.</p>
   <p class="practice-notice">For tables with multiple valid wordings, answers are compared with the saved cell text; check the original lesson if you think another form is valid.</p>
  </div>
  <div id="grammar-recall" class="grammar-panel" hidden>
@@ -1430,6 +1438,8 @@ async function showGrammar(wordId,force=false,requestedMode='read'){
  $('grammar-read-tab').textContent=isWordTable?'📖 View original table':'📖 Read lesson';
  $('grammar-table-tab').textContent=isWordTable?'✍ Practice table':'✍ Practice tables';
  $('grammar-recall-tab').hidden=isWordTable;
+ $('table-review-footer').hidden=!isWordTable;
+ $('table-review-notice').hidden=!isWordTable;
  $('grammar-desc').textContent=isWordTable?'Loading the table from this word’s Notion page…':'Loading your grammar lesson from Notion…';
  $('grammar-notion-link').href=word.url||'https://www.notion.so/'+wordId.replaceAll('-','');
  $('grammar-lesson-content').innerHTML='<p class="conjugation-hint">Loading original Notion content…</p>';
@@ -1484,7 +1494,7 @@ async function act(mode){
  if(reviewActionBusy)return;
  const word=list.find(w=>w.id===selectedId);if(!word)return;
  const action=mode==='master'?'master':mode==='forgot'?'forgot':'remember';
- const buttons=['forgot','remembered','master-word','practice-mark-reviewed'].map($);
+ const buttons=['forgot','remembered','master-word','practice-mark-reviewed','table-mark-reviewed'].map($);
  reviewActionBusy=true;
  buttons.forEach(button=>button.disabled=true);
  const isSessionReview=!!reviewSession&&reviewSession.pendingIds.includes(word.id);
@@ -1496,6 +1506,7 @@ async function act(mode){
    list[position]={...word,...saved,next:parseDate(saved.next)};
   }
   if(conjugationWordId===word.id&&$('conjugation-overlay').classList.contains('open'))closeConjugation();
+  if(grammarWordId===word.id&&$('grammar-overlay').classList.contains('open'))closeGrammar();
   $('overlay').classList.remove('open');
   selectedId=null;
   enqueueReviewHistory(word,action);
@@ -1875,6 +1886,10 @@ $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('retry-conjugation').onclick=resetConjugationPractice;
  $('reveal-conjugation-answers').onclick=revealConjugationAnswers;
  $('practice-mark-reviewed').onclick=()=>{if(conjugationWordId&&conjugationWordId===selectedId)act('remember')};
+ $('table-mark-reviewed').onclick=()=>{
+  const word=list.find(w=>w.id===selectedId);
+  if(word&&grammarWordId===selectedId&&isTableEntry(word)&&$('grammar-overlay').classList.contains('open'))act('remember');
+ };
  $('practice-fields').addEventListener('input',e=>{if(e.target.classList.contains('practice-answer'))clearPracticeGrades()});
  $('conjugation-close').onclick=closeConjugation;
  $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true,conjugationMode)};
