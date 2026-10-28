@@ -81,13 +81,13 @@
 .catalog-controls{display:flex;justify-content:flex-end;align-items:center;gap:7px;flex-wrap:wrap}.catalog-controls .filter{white-space:nowrap}
 .catalog-search{max-width:250px;min-width:165px}
 .catalog-table-wrap{background:#101b2d;border:1px solid #293b54;border-radius:13px;overflow:hidden}
-.catalog-row{display:grid;grid-template-columns:minmax(130px,1.2fr) minmax(135px,1.3fr) minmax(90px,.65fr) 54px 76px;gap:13px;align-items:center;padding:13px 17px;border-top:1px solid var(--stroke)}
+.catalog-row{display:grid;grid-template-columns:minmax(150px,1.8fr) minmax(90px,.8fr) 65px 86px;gap:13px;align-items:center;padding:13px 17px;border-top:1px solid var(--stroke)}
 .catalog-row:first-child{border-top:0}.catalog-header{background:#1c2943;color:#8094b2;font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
-.catalog-word{font-size:12px;font-weight:750;color:#ecf3ff;overflow-wrap:anywhere}.catalog-translation{font-size:11.5px;color:#b8c8e2;white-space:pre-wrap;overflow-wrap:anywhere}
+.catalog-word{font-size:12px;font-weight:750;color:#ecf3ff;overflow-wrap:anywhere}
 .catalog-category{font-size:10px;color:#a99dce}.catalog-meta{color:#8597b1;font-size:10px;margin-top:3px}
 .catalog-foot{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-top:15px;color:#8395b2;font-size:10px;flex-wrap:wrap}.catalog-foot .import-btn{font-size:11px;padding:8px 12px}
 @media(max-width:1150px){.catalog-head{flex-direction:column}.catalog-controls{justify-content:flex-start}}
-@media(max-width:620px){.catalog-hero{padding:21px;gap:10px}.catalog-count{min-width:75px;padding:13px 8px}.catalog-count strong{font-size:24px}.catalog-count span{letter-spacing:.5px;font-size:8px}.catalog-content{padding:13px}.catalog-row{grid-template-columns:minmax(0,1.15fr) minmax(0,1.1fr) 64px;gap:8px;padding:12px 9px}.catalog-row>*:nth-child(3),.catalog-row>*:nth-child(4){display:none}.catalog-controls{gap:5px}.catalog-search{max-width:100%;flex:1;min-width:145px}}
+@media(max-width:620px){.catalog-hero{padding:21px;gap:10px}.catalog-count{min-width:75px;padding:13px 8px}.catalog-count strong{font-size:24px}.catalog-count span{letter-spacing:.5px;font-size:8px}.catalog-content{padding:13px}.catalog-row{grid-template-columns:minmax(0,1.5fr) minmax(0,.8fr) 74px;gap:8px;padding:12px 9px}.catalog-row>*:nth-child(3){display:none}.catalog-controls{gap:5px}.catalog-search{max-width:100%;flex:1;min-width:145px}}
 </style>
 </head>
 <body>
@@ -112,7 +112,6 @@
     <button class="navlink" data-nav="catalog"><svg><use href="#i-book"/></svg><span class="navtxt">Vocabulary</span><span class="navnumber" id="side-vocab-count">0</span></button>
     <button class="navlink" data-nav="queue"><svg><use href="#i-clock"/></svg><span class="navtxt">Review queue</span><span class="navnumber" id="side-due">0</span></button>
     <button class="navlink" data-nav="analytics"><svg><use href="#i-chart"/></svg><span class="navtxt">Analytics</span></button>
-    <button class="navlink" data-nav="mastered"><svg><use href="#i-award"/></svg><span class="navtxt">Mastered words</span></button>
     <div class="nav-label monthly-nav-label">Monthly Life</div>
     <button class="navlink monthly-nav" data-nav="monthly" id="monthly-nav"><svg><use href="#i-chart"/></svg><span class="navtxt">Monthly Tracker</span><span class="month-nav-emoji">🗓️</span></button>
   </nav>
@@ -152,7 +151,7 @@
   </div>
   <div class="catalog-content">
    <div class="catalog-head">
-    <div><h2 id="catalog-heading">All vocabulary</h2><p>Browse translations, open flashcards, and practise Notion tables or conjugations. Study here without marking words reviewed.</p></div>
+    <div><h2 id="catalog-heading">All vocabulary</h2><p>Choose a word to reveal its translation in a flashcard or practise its conjugation, grammar or table. Browsing here never changes your review progress.</p></div>
     <div class="catalog-controls">
      <button type="button" class="filter active" data-catalog-filter="all">All</button>
      <button type="button" class="filter" data-catalog-filter="words">Words</button>
@@ -163,7 +162,7 @@
     </div>
    </div>
    <div class="catalog-table-wrap">
-    <div class="catalog-row catalog-header"><div>Word / phrase</div><div>Translation</div><div>Category</div><div>Class</div><div>Study</div></div>
+    <div class="catalog-row catalog-header"><div>Word / phrase</div><div>Category</div><div>Class</div><div>Study</div></div>
     <div id="catalog-rows"></div>
    </div>
    <div class="catalog-foot"><span id="catalog-rows-count">Showing vocabulary</span><button id="catalog-more" type="button" class="import-btn" hidden>Show more ↓</button><span>View &amp; practise only · Notion synced</span></div>
@@ -431,7 +430,6 @@ function renderCatalog(){
   const kind=typeKind(w.type);
   const category=kind==='verb'?'Verb':kind==='grammar'?'Grammar':isTableEntry(w)?'Table':'Word';
   return '<div class="catalog-row"><div><div class="catalog-word">'+esc(w.word)+'</div><div class="catalog-meta">'+esc(w.lang)+'</div></div>'
-   +'<div class="catalog-translation">'+esc(w.meaning||'No translation saved')+'</div>'
    +'<div class="catalog-category">'+esc(category)+'</div><div class="catalog-meta">'+esc('Class '+w.klass)+'</div>'
    +'<div><button type="button" class="action" data-catalog-study="'+esc(w.id)+'">'+(kind==='grammar'?'Study →':'Practise →')+'</button></div></div>';
  }).join(''):'<div class="empty-state">No vocabulary matches this search or category.</div>';
@@ -1638,8 +1636,8 @@ function showWorkspace(area='vocabulary',target='overview'){
  $('monthly-workspace').hidden=!monthly;
  $('add-word').hidden=monthly;
  $('reverse-mode').hidden=monthly;
- $('workspace-breadcrumb').textContent=monthly?'Monthly Tracker':catalog?(target==='mastered'?'Mastered words':'Vocabulary'):target==='analytics'?'Analytics':target==='queue'?'Review queue':'Overview';
- document.querySelectorAll('[data-nav]').forEach(button=>button.classList.toggle('active',button.dataset.nav===(monthly?'monthly':catalog?target:target)));
+ $('workspace-breadcrumb').textContent=monthly?'Monthly Tracker':catalog?'Vocabulary':target==='analytics'?'Analytics':target==='queue'?'Review queue':'Overview';
+ document.querySelectorAll('[data-nav]').forEach(button=>button.classList.toggle('active',button.dataset.nav===(monthly?'monthly':target)));
  if(catalog)renderCatalog();
  window.scrollTo({top:0,behavior:'instant'});
  if(monthly&&!monthLoading){
@@ -1985,7 +1983,7 @@ $('queue-more').onclick=()=>{queueLimit+=30;render()};
  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{
  const n=b.dataset.nav;
  if(n==='monthly'){showWorkspace('monthly');return}
- if(n==='catalog'||n==='mastered'){catalogFilter=n==='mastered'?'mastered':'all';catalogLimit=60;showWorkspace('catalog',n);return}
+ if(n==='catalog'){catalogFilter='all';catalogLimit=60;showWorkspace('catalog',n);return}
  showWorkspace('vocabulary',n);
  if(n==='queue'||n==='analytics')$(n).scrollIntoView({behavior:'smooth'});
 });
