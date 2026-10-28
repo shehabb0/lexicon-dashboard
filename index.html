@@ -1008,7 +1008,7 @@ function renderGrammarQuestions(){
  }).join('');
 }
 function grammarComparable(value){
- return normalizeAnswer(value).replace(/[→⇒➜]/g,' to ').replace(/\s*(?:->|=>)\s*/g,' to ').replace(/\s*\/\s*/g,' / ').replace(/\s+/g,' ').trim();
+ return normalizeAnswer(value).replace(/[→⇒➜]/g,' to ').replace(/\s*(?:->|=>)\s*/g,' to ').replace(/\s*\/\s*/g,' ').replace(/\s+/g,' ').trim();
 }
 function gradeGrammarValue(typed,expected){
  const answer=grammarComparable(typed),ref=grammarComparable(expected);
