@@ -1493,6 +1493,7 @@ function showWorkspace(area='vocabulary',target='overview'){
  $('vocabulary-workspace').hidden=monthly;
  $('monthly-workspace').hidden=!monthly;
  $('add-word').hidden=monthly;
+ $('reverse-mode').hidden=monthly;
  $('workspace-breadcrumb').textContent=monthly?'Monthly Tracker':target==='mastered'?'Mastered words':target==='analytics'?'Analytics':target==='queue'?'Review queue':'Overview';
  document.querySelectorAll('[data-nav]').forEach(button=>button.classList.toggle('active',button.dataset.nav===(monthly?'monthly':target)));
  window.scrollTo({top:0,behavior:'instant'});
