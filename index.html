@@ -398,6 +398,99 @@ async function recordHistoryAction(word,action){
  }});
  await readReviewHistory();
 }
+
+async function retrieveChildren(blockId){
+ const results=[];let cursor=null;
+ do {
+  const params=new URLSearchParams({page_size:'100'});
+  if(cursor)params.set('start_cursor',cursor);
+  const result=await notion('GET','/blocks/'+encodeURIComponent(blockId)+'/children?'+params.toString());
+  results.push(...(result.results||[]));
+  cursor=result.has_more?result.next_cursor:null;
+  if(results.length>=600){cursor=null;console.warn('Conjugation listing limited to 600 blocks')}
+ }while(cursor);
+ return results;
+}
+function headingFromBlock(block){return textFromRich(block?.[block.type]?.rich_text||[])||''}
+async function getConjugationTables(pageId){
+ const tables=[],links=[],visited=new Set();
+ let inspected=0;
+ async function explore(blockId,depth,heading){
+  if(depth>4||inspected>=220)return;
+  const blocks=await retrieveChildren(blockId);let currentHeading=heading;
+  for(const block of blocks){
+   inspected++;if(inspected>220)break;
+   if(block.type&&block.type.startsWith('heading_')){currentHeading=headingFromBlock(block)||currentHeading;continue}
+   if(block.type==='table'){
+    const children=await retrieveChildren(block.id);
+    tables.push({
+     label:currentHeading||'Conjugation '+(tables.length+1),
+     columnHeader:!!block.table?.has_column_header,
+     rowHeader:!!block.table?.has_row_header,
+     rows:children.filter(x=>x.type==='table_row').map(row=>(row.table_row?.cells||[]).map(cell=>textFromRich(cell)))
+    });
+    continue;
+   }
+   if(block.type==='child_database'){links.push({title:block.child_database?.title||'Conjugation database',url:'https://www.notion.so/'+block.id.replaceAll('-','')});continue}
+   if(block.type==='child_page'){links.push({title:block.child_page?.title||'Conjugation page',url:'https://www.notion.so/'+block.id.replaceAll('-','')});continue}
+   if(block.type==='link_to_page'){
+    const linkedId=block.link_to_page?.page_id||block.link_to_page?.database_id;
+    if(linkedId)links.push({title:'Linked Notion page',url:'https://www.notion.so/'+linkedId.replaceAll('-','')});
+    continue;
+   }
+   if(block.has_children&&['column_list','column','toggle','callout','synced_block','bulleted_list_item','numbered_list_item','paragraph','quote'].includes(block.type)&&!visited.has(block.id)){
+    visited.add(block.id);
+    const headingInside=block.type==='toggle'?headingFromBlock(block)||currentHeading:currentHeading;
+    await explore(block.id,depth+1,headingInside);
+   }
+  }
+ }
+ await explore(pageId,0,'');
+ return {tables,links};
+}
+function renderConjugation(data){
+ let html=data.tables.filter(table=>table.rows.length).map((table,i)=>{
+  const width=Math.max(0,...table.rows.map(row=>row.length));
+  const rows=table.rows.map((cells,rowIndex)=>{
+   const content=Array.from({length:width},(_,col)=>{
+    const value=esc(cells[col]||'').split(String.fromCharCode(10)).join('<br>');
+    const isHeader=(rowIndex===0&&table.columnHeader)||(col===0&&table.rowHeader);
+    if(!isHeader)return '<td>'+value+'</td>';
+    return '<th scope="'+(rowIndex===0&&table.columnHeader?'col':'row')+'">'+value+'</th>';
+   }).join('');
+   return '<tr>'+content+'</tr>';
+  });
+  const markup=table.columnHeader?'<thead>'+rows[0]+'</thead><tbody>'+rows.slice(1).join('')+'</tbody>':'<tbody>'+rows.join('')+'</tbody>';
+  return '<section class="conjugation-section"><h4>'+esc(table.label||'Conjugation '+(i+1))+'</h4><div class="conjugation-table-wrap"><table class="conjugation-table">'+markup+'</table></div></section>';
+ }).join('');
+ for(const link of data.links){
+  if(link.url.startsWith('https://www.notion.so/'))html+='<p class="conjugation-hint">Additional Notion database/subpage: <a href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer" style="color:var(--mint)">'+esc(link.title)+' ↗</a></p>';
+ }
+ $('conjugation-content').innerHTML=html||'<p class="conjugation-hint">No simple Notion table was found in this verb page. If it is an inline database or an embedded table, open the original page in Notion using the link below.</p>';
+}
+async function showConjugation(wordId,force=false){
+ const word=list.find(w=>w.id===wordId);
+ if(!word||typeKind(word.type)!=='verb')return;
+ conjugationWordId=wordId;
+ const request=++conjugationRequest;
+ $('conjugation-title').textContent=word.word+' · Conjugation';
+ $('conjugation-desc').textContent='Conjugation tables from your Notion verb page.';
+ $('conjugation-content').innerHTML='<p class="conjugation-hint">Loading your conjugations from Notion…</p>';
+ $('conjugation-notion-link').href=word.url||'https://www.notion.so/'+wordId.replaceAll('-','');
+ $('conjugation-overlay').classList.add('open');
+ $('conjugation-refresh').disabled=true;
+ try{
+  const result=(!force&&conjugationCache.has(wordId))?conjugationCache.get(wordId):await getConjugationTables(wordId);
+  if(request!==conjugationRequest||conjugationWordId!==wordId)return;
+  conjugationCache.set(wordId,result);
+  renderConjugation(result);
+ }catch(e){
+  if(request!==conjugationRequest)return;
+  $('conjugation-content').innerHTML='<p class="conjugation-hint">Could not load this conjugation: '+esc(e.message)+'. Open the original word page in Notion using the link below.</p>';
+ }finally{if(request===conjugationRequest)$('conjugation-refresh').disabled=false}
+}
+function closeConjugation(){conjugationRequest++;conjugationWordId=null;$('conjugation-overlay').classList.remove('open')}
+
 async function loadWords(silent=false){
  try {
   const words=await getAllWords();
@@ -443,8 +536,12 @@ $('import').onclick=()=>loadWords();
  $('add-word-form').addEventListener('submit',saveNewWord);
 $('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('login-error').textContent='';$('login-screen').classList.add('open')};
 $('start').onclick=()=>{const due=dueWords().sort((a,b)=>a.next-b.next);if(due.length)openWord(due[0].id);else toast('You are all caught up! ✦')};
-$('flip').onclick=()=>{const a=$('flash-answer'),ex=$('flash-example');const hidden=a.classList.toggle('hidden');ex.classList.toggle('hidden',hidden);a.setAttribute('aria-hidden',String(hidden));ex.setAttribute('aria-hidden',String(hidden));$('flip').textContent=hidden?'Reveal translation':'Hide translation'};
-$('close').onclick=()=>$('overlay').classList.remove('open');$('overlay').onclick=e=>{if(e.target===$('overlay'))$('overlay').classList.remove('open')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('overlay').classList.remove('open');$('add-overlay').classList.remove('open')}});
+$('show-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId)};
+ $('conjugation-close').onclick=closeConjugation;
+ $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true)};
+ $('conjugation-overlay').onclick=e=>{if(e.target===$('conjugation-overlay'))closeConjugation()};
+ $('flip').onclick=()=>{const a=$('flash-answer'),ex=$('flash-example');const hidden=a.classList.toggle('hidden');ex.classList.toggle('hidden',hidden);a.setAttribute('aria-hidden',String(hidden));ex.setAttribute('aria-hidden',String(hidden));$('flip').textContent=hidden?'Reveal translation':'Hide translation'};
+$('close').onclick=()=>$('overlay').classList.remove('open');$('overlay').onclick=e=>{if(e.target===$('overlay'))$('overlay').classList.remove('open')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('conjugation-overlay').classList.contains('open'))closeConjugation();else{$('overlay').classList.remove('open');$('add-overlay').classList.remove('open')}}});
 $('forgot').onclick=()=>act('forgot');$('remembered').onclick=()=>act('remember');$('master-word').onclick=()=>act('master');
 $('search').oninput=e=>{search=e.target.value.toLowerCase().trim();render()};document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()});document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;document.querySelectorAll('[data-lang]').forEach(x=>x.classList.toggle('selected',x===b));render()});
  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-nav]').forEach(x=>x.classList.toggle('active',x===b));const n=b.dataset.nav;if(n==='mastered'){filter='mastered';document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x.dataset.filter==='mastered'));render();$('queue').scrollIntoView({behavior:'smooth'})}else if(n==='queue'){$('queue').scrollIntoView({behavior:'smooth'})}else $(n).scrollIntoView({behavior:'smooth'})});
