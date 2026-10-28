@@ -70,7 +70,7 @@
 .grammar-modal.word-table-compact #table-review-notice{margin:7px 0 0}
 /* Vocabulary library — independent from the scheduled review queue. */
 #catalog-workspace[hidden]{display:none!important}
-#flash-review-actions[hidden],#flash-review-note[hidden],#conjugation-review-footer[hidden]{display:none!important}
+#flash-review-actions[hidden],#flash-review-note[hidden],#conjugation-review-footer[hidden],#conjugation-review-notice[hidden]{display:none!important}
 .catalog-hero{border:1px solid #34556b;border-radius:22px;display:flex;justify-content:space-between;align-items:center;gap:24px;padding:27px 32px;margin-bottom:20px;background:radial-gradient(ellipse at 90% 10%,#6967bc42,transparent 65%),linear-gradient(115deg,#152c38,#242642)}
 .catalog-hero h1{font-size:clamp(27px,3vw,37px);line-height:1.18;letter-spacing:-1px;margin:10px 0}.catalog-hero h1 em{font-style:normal;color:#b9b0ff}.catalog-hero p{max-width:580px;color:#b3c2dd;font-size:12px;line-height:1.7;margin:0}
 .catalog-count{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid #5b5d85;background:#302d5350;border-radius:17px;min-width:116px;padding:18px 12px;flex-shrink:0}
@@ -252,7 +252,7 @@
     <div id="practice-summary" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
   </form>
   <div class="practice-footer practice-review-footer" id="conjugation-review-footer"><button type="button" id="practice-mark-reviewed" class="modalbutton green">✓ Mark Reviewed</button><span class="practice-review-hint">Save this verb's review to Notion and continue to the next due item.</span></div>
-  <p class="practice-notice">Checking answers is practice only. Mark Reviewed saves your review and updates your Notion schedule.</p>
+  <p class="practice-notice" id="conjugation-review-notice">Checking answers is practice only. Mark Reviewed saves your review and updates your Notion schedule.</p>
 </div>
 <div id="conjugation-content" aria-live="polite"><p class="conjugation-hint">Loading conjugation…</p></div>
 <div class="conjugation-footer"><button type="button" class="practice-switch" id="switch-conjugation-practice">✍ Practice this verb</button><button class="modalbutton" id="conjugation-refresh" type="button">↻ Refresh tables</button><a id="conjugation-notion-link" href="#" target="_blank" rel="noopener noreferrer">Open in Notion ↗</a></div>
@@ -359,7 +359,8 @@ const iso=d=>{if(!d||Number.isNaN(d.getTime()))return '';const y=d.getFullYear()
 const dayDiff=d=>Math.round((startOfDay(d).getTime()-startOfDay(new Date()).getTime())/dayMs);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let list=[], filter='due',lang='All',search='',selectedId=null,imported=true,queueLimit=24;
+let list=[],lang='All',search='',selectedId=null,imported=true,queueLimit=24;
+let catalogFilter='all',catalogSearch='',catalogLimit=60,studyOnly=false;
 let reviewSession=null,reviewActionBusy=false;
 let reviewHistorySaveQueue=Promise.resolve();
 let conjugationWordId=null,conjugationRequest=0,conjugationMode='view',practiceExercises=[];
@@ -383,7 +384,7 @@ function toggleReverseMode(){
  reverseStudy=!reverseStudy;
  try{localStorage.setItem(REVERSE_STORAGE_KEY,String(reverseStudy))}catch(err){}
  peekedTranslations.clear();updateReverseSwitch();render();
- if(selectedId&&$('overlay').classList.contains('open'))openWord(selectedId,!!reviewSession);
+ if(selectedId&&$('overlay').classList.contains('open'))openWord(selectedId,!!reviewSession,studyOnly);
 }
 let dataSourceSchema=null, schemaSourceId='';
 const SETTINGS_KEY='lexicon_notion_browser_connection';
@@ -407,22 +408,45 @@ function isTableEntry(word){
  return /(?:^|[\s,;|/])(?:table|tabella)(?=$|[\s,;|/])/i.test(labels);
 }
 function filtered(){
- let x=list.filter(w=>lang==='All'||w.lang===lang);
- if(filter==='due')x=x.filter(w=>!w.mastered&&w.next&&w.next.getTime()<=Date.now()&&!['Learned','Not Now','No Difficulty'].includes(w.difficulty));
- else if(filter==='words')x=x.filter(w=>typeKind(w.type)==='word');
- else if(filter==='verbs')x=x.filter(w=>typeKind(w.type)==='verb');
- else if(filter==='grammar')x=x.filter(w=>typeKind(w.type)==='grammar');
- else if(filter==='mastered')x=x.filter(w=>w.mastered||w.difficulty==='Learned');
- if(search)x=x.filter(w=>(w.word+' '+w.meaning+' '+w.type).toLowerCase().includes(search));
- return x.sort((a,b)=>{if(a.mastered!==b.mastered)return Number(a.mastered)-Number(b.mastered);const diff=(a.next?a.next.getTime():Infinity)-(b.next?b.next.getTime():Infinity);return diff||a.word.localeCompare(b.word)});
+ // Review Queue: due and overdue items only, including when searching.
+ const words=dueWords().filter(w=>lang==='All'||w.lang===lang);
+ const matches=search?words.filter(w=>(w.word+' '+w.meaning+' '+w.type+' '+w.lang).toLowerCase().includes(search)):words;
+ return matches.sort((a,b)=>a.next-b.next||a.word.localeCompare(b.word));
+}
+function filteredCatalog(){
+ let matches=list;
+ if(catalogFilter==='words')matches=matches.filter(w=>typeKind(w.type)==='word');
+ else if(catalogFilter==='verbs')matches=matches.filter(w=>typeKind(w.type)==='verb');
+ else if(catalogFilter==='grammar')matches=matches.filter(w=>typeKind(w.type)==='grammar');
+ else if(catalogFilter==='mastered')matches=matches.filter(w=>w.mastered||w.difficulty==='Learned');
+ const q=catalogSearch.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+ if(q)matches=matches.filter(w=>(w.word+' '+w.meaning+' '+w.type+' '+(w.tableCategory||'')+' '+w.lang).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(q));
+ return [...matches].sort((a,b)=>a.word.localeCompare(b.word,undefined,{sensitivity:'base'})||a.lang.localeCompare(b.lang));
+}
+function renderCatalog(){
+ const all=filteredCatalog(),shown=all.slice(0,catalogLimit);
+ $('catalog-total-count').textContent=list.length.toLocaleString();
+ $('catalog-heading').textContent=({mastered:'Mastered vocabulary',words:'Words',verbs:'Verbs',grammar:'Grammar',all:'All vocabulary'})[catalogFilter]||'All vocabulary';
+ $('catalog-rows').innerHTML=shown.length?shown.map(w=>{
+  const kind=typeKind(w.type);
+  const category=kind==='verb'?'Verb':kind==='grammar'?'Grammar':isTableEntry(w)?'Table':'Word';
+  return '<div class="catalog-row"><div><div class="catalog-word">'+esc(w.word)+'</div><div class="catalog-meta">'+esc(w.lang)+'</div></div>'
+   +'<div class="catalog-translation">'+esc(w.meaning||'No translation saved')+'</div>'
+   +'<div class="catalog-category">'+esc(category)+'</div><div class="catalog-meta">'+esc('Class '+w.klass)+'</div>'
+   +'<div><button type="button" class="action" data-catalog-study="'+esc(w.id)+'">'+(kind==='grammar'?'Study →':'Practise →')+'</button></div></div>';
+ }).join(''):'<div class="empty-state">No vocabulary matches this search or category.</div>';
+ $('catalog-rows-count').textContent='Showing '+shown.length+' of '+all.length+' matching entries · '+list.length+' total';
+ $('catalog-more').hidden=all.length<=catalogLimit;
+ document.querySelectorAll('[data-catalog-filter]').forEach(b=>b.classList.toggle('active',b.dataset.catalogFilter===catalogFilter));
+ document.querySelectorAll('[data-catalog-study]').forEach(b=>b.addEventListener('click',()=>openWord(b.dataset.catalogStudy,false,true)));
 }
 function render(){const total=list.length,master=list.filter(w=>w.mastered||w.difficulty==='Learned').length,due=dueWords().length,late=activeWords().filter(w=>w.next&&dayDiff(w.next)<0).length,pct=total?Math.round(master/total*100):0;
- $('total').textContent=total;$('mastered').textContent=master;$('due').textContent=due;$('overdue').textContent=late;$('side-due').textContent=due;$('mastered-note').textContent=pct+'% of your collection';$('donut').style.setProperty('--degree',pct+'%');$('donut-value').textContent=pct+'%';$('progress-numbers').textContent=master+' / '+total;$('progress-bar').style.width=pct+'%';$('side-progress').style.width=pct+'%';$('progress-label').textContent=pct>75?'Beautiful progress ✦':pct>30?'Making steady progress ✦':'Every word counts ✦';
+ $('total').textContent=total;$('mastered').textContent=master;$('due').textContent=due;$('overdue').textContent=late;$('side-due').textContent=due;$('side-vocab-count').textContent=total;$('mastered-note').textContent=pct+'% of your collection';$('donut').style.setProperty('--degree',pct+'%');$('donut-value').textContent=pct+'%';$('progress-numbers').textContent=master+' / '+total;$('progress-bar').style.width=pct+'%';$('side-progress').style.width=pct+'%';$('progress-label').textContent=pct>75?'Beautiful progress ✦':pct>30?'Making steady progress ✦':'Every word counts ✦';
  $('class-chart').innerHTML=Array.from({length:10},(_,i)=>{const n=list.filter(w=>w.klass===i+1&&(lang==='All'||w.lang===lang)&&!w.mastered).length;const max=Math.max(...Array.from({length:10},(_,z)=>list.filter(w=>w.klass===z+1&&(lang==='All'||w.lang===lang)&&!w.mastered).length),1);return `<div class="class-row"><span class="name">Class ${i+1}</span><div class="track"><div class="fill" style="width:${(n/max)*100}%"></div></div><span class="value">${n}</span></div>`}).join('');
  const shown=filtered();$('queue-rows').innerHTML=shown.length?shown.slice(0,queueLimit).map(w=>{const [s,label]=getStatus(w);const rev=reversedWord(w),promptText=rev?w.meaning:w.word,answerText=rev?w.word:w.meaning;return `<div class="qrow"><div><div class="word-name">${esc(promptText)}</div><div class="word-meta"><span class="lang-dot" style="background:${w.lang==='French'?'#a89bff':'#83eccb'}"></span>${esc(w.lang)} · ${esc(w.type||'Word')}${rev?' · REVERSE':''}</div></div><div class="meaning ${peekedTranslations.has(w.id)?'':'masked'}"><span>${peekedTranslations.has(w.id)?esc(answerText||'No translation'):'••••••'}</span><button type="button" class="peek" data-peek="${esc(w.id)}" aria-label="${peekedTranslations.has(w.id)?'Hide':'Show'} ${rev?'original word':'translation'} for ${esc(promptText)}">${peekedTranslations.has(w.id)?'Hide':'Show'}</button></div><div><span class="status ${s}">${esc(label)}</span></div><div style="font-size:11px;color:#b8c8dd">Class ${w.klass}</div><div><button class="action" data-open="${w.id}">${typeKind(w.type)==='grammar'?'Study →':w.mastered?'View':'Review →'}</button></div></div>`}).join(''):`<div class="empty-state">✦ No words in this view. You're all caught up!</div>`;$('rows-count').textContent=`Showing ${Math.min(shown.length,queueLimit)} of ${shown.length} matching words`;$('queue-more').hidden=shown.length<=queueLimit;
  document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>openWord(b.dataset.open)));
   document.querySelectorAll('[data-peek]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.peek;if(peekedTranslations.has(id))peekedTranslations.delete(id);else peekedTranslations.add(id);render()}));
- renderActivity();renderHeat();
+ renderCatalog();renderActivity();renderHeat();
  }
 function calculateStudyStreak(events,now=new Date()){
  const dates=new Set((events||[]).map(e=>{
@@ -672,10 +696,13 @@ function closeReviewFlashcard(){
  selectedId=null;
  $('overlay').classList.remove('open');
 }
-function openWord(id,fromReviewSession=false){
+function openWord(id,fromReviewSession=false,viewOnly=false){
  const w=list.find(x=>x.id===id);if(!w)return;
+ studyOnly=!!viewOnly;
  if(!fromReviewSession)reviewSession=null;
  selectedId=id;
+ $('flash-review-actions').hidden=studyOnly;
+ $('flash-review-note').hidden=studyOnly;
  const isGrammar=typeKind(w.type)==='grammar';
  const progress=fromReviewSession&&reviewSession?` · REVIEW ${reviewSession.completed+1} / ${reviewSession.total}`:'';
  const reversed=reversedWord(w);
@@ -877,7 +904,7 @@ async function saveNewWord(e){
   $('add-overlay').classList.remove('open');
   const refreshed=await loadWords(true);
   toast(refreshed?'Word added to Notion ✓':'Word saved in Notion. Refresh to see it.');
-  if(refreshed&&created?.id){filter='everything';queueLimit=24;document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter==='everything'));search='';$('search').value='';render();$('queue').scrollIntoView({behavior:'smooth'})}
+  if(refreshed&&created?.id){catalogFilter='all';catalogSearch='';catalogLimit=60;$('catalog-search').value='';render();showWorkspace('catalog','catalog')}
  }catch(err){
   $('add-error').textContent=err.status===403?'Notion denied permission. Enable Insert content for your Lexicon integration, then try again.':err.message;
  }finally{$('add-submit').disabled=false;$('add-submit').textContent='＋ Save to Notion'}
@@ -1204,6 +1231,8 @@ async function showConjugation(wordId,force=false,mode='view'){
  const word=list.find(w=>w.id===wordId);
  if(!word||typeKind(word.type)!=='verb')return;
  conjugationWordId=wordId;
+ $('conjugation-review-footer').hidden=studyOnly;
+ $('conjugation-review-notice').hidden=studyOnly;
  const request=++conjugationRequest;
  $('conjugation-title').textContent=word.word+' · Conjugation';
  $('conjugation-desc').textContent='Conjugation tables from your Notion verb page.';
@@ -1479,8 +1508,8 @@ async function showGrammar(wordId,force=false,requestedMode='read'){
  $('grammar-read-tab').textContent=isWordTable?'📖 View original table':'📖 Read lesson';
  $('grammar-table-tab').textContent=isWordTable?'✍ Practice table':'✍ Practice tables';
  $('grammar-recall-tab').hidden=isWordTable;
- $('table-review-footer').hidden=!isWordTable;
- $('table-review-notice').hidden=!isWordTable;
+ $('table-review-footer').hidden=!isWordTable||studyOnly;
+ $('table-review-notice').hidden=!isWordTable||studyOnly;
  $('grammar-desc').textContent=isWordTable?'Loading the table from this word’s Notion page…':'Loading your grammar lesson from Notion…';
  $('grammar-notion-link').href=word.url||'https://www.notion.so/'+wordId.replaceAll('-','');
  $('grammar-lesson-content').innerHTML='<p class="conjugation-hint">Loading original Notion content…</p>';
@@ -1532,7 +1561,8 @@ async function loadWords(silent=false){
  }
 }
 async function act(mode){
- if(reviewActionBusy)return;
+ // Vocabulary library can practise, but never change Notion review progress.
+ if(reviewActionBusy||studyOnly)return;
  const word=list.find(w=>w.id===selectedId);if(!word)return;
  const action=mode==='master'?'master':mode==='forgot'?'forgot':'remember';
  const buttons=['forgot','remembered','master-word','practice-mark-reviewed','table-mark-reviewed'].map($);
@@ -1602,17 +1632,19 @@ function normalizeMonthId(input){
 function monthPageUrl(id){return 'https://www.notion.so/'+String(id||'').replace(/-/g,'')}
 function showWorkspace(area='vocabulary',target='overview'){
  activeWorkspace=area;
- const monthly=area==='monthly';
- $('vocabulary-workspace').hidden=monthly;
+ const monthly=area==='monthly',catalog=area==='catalog';
+ $('vocabulary-workspace').hidden=monthly||catalog;
+ $('catalog-workspace').hidden=!catalog;
  $('monthly-workspace').hidden=!monthly;
  $('add-word').hidden=monthly;
  $('reverse-mode').hidden=monthly;
- $('workspace-breadcrumb').textContent=monthly?'Monthly Tracker':target==='mastered'?'Mastered words':target==='analytics'?'Analytics':target==='queue'?'Review queue':'Overview';
- document.querySelectorAll('[data-nav]').forEach(button=>button.classList.toggle('active',button.dataset.nav===(monthly?'monthly':target)));
+ $('workspace-breadcrumb').textContent=monthly?'Monthly Tracker':catalog?(target==='mastered'?'Mastered words':'Vocabulary'):target==='analytics'?'Analytics':target==='queue'?'Review queue':'Overview';
+ document.querySelectorAll('[data-nav]').forEach(button=>button.classList.toggle('active',button.dataset.nav===(monthly?'monthly':catalog?target:target)));
+ if(catalog)renderCatalog();
  window.scrollTo({top:0,behavior:'instant'});
  if(monthly&&!monthLoading){
   if(monthRootId&&!monthState)loadAvailableMonths();
-  else if(!monthRootId){$('month-connection').hidden=false;$('month-data').hidden=true;}
+  else if(!monthRootId){$('month-connection').hidden=false;$('month-data').hidden=true}
  }
 }
 function showMonthError(message){
@@ -1945,13 +1977,17 @@ $('close').onclick=closeReviewFlashcard;
  $('review-complete-overlay').onclick=e=>{if(e.target===$('review-complete-overlay'))$('review-complete-overlay').classList.remove('open')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('grammar-overlay').classList.contains('open'))closeGrammar();else if($('conjugation-overlay').classList.contains('open'))closeConjugation();else if($('review-complete-overlay').classList.contains('open'))$('review-complete-overlay').classList.remove('open');else if($('overlay').classList.contains('open'))closeReviewFlashcard();else $('add-overlay').classList.remove('open')}});
 $('forgot').onclick=()=>act('forgot');$('remembered').onclick=()=>act('remember');$('master-word').onclick=()=>act('master');
 $('queue-more').onclick=()=>{queueLimit+=30;render()};
- $('search').oninput=e=>{search=e.target.value.toLowerCase().trim();queueLimit=24;render()};document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;queueLimit=24;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()});document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;document.querySelectorAll('[data-lang]').forEach(x=>x.classList.toggle('selected',x===b));render()});
+ $('catalog-more').onclick=()=>{catalogLimit+=60;renderCatalog()};
+ $('catalog-search').oninput=e=>{catalogSearch=e.target.value.toLowerCase().trim();catalogLimit=60;renderCatalog()};
+ document.querySelectorAll('[data-catalog-filter]').forEach(b=>b.onclick=()=>{catalogFilter=b.dataset.catalogFilter;catalogLimit=60;renderCatalog()});
+ $('search').oninput=e=>{search=e.target.value.toLowerCase().trim();queueLimit=24;render()};
+ document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;document.querySelectorAll('[data-lang]').forEach(x=>x.classList.toggle('selected',x===b));render()});
  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{
  const n=b.dataset.nav;
  if(n==='monthly'){showWorkspace('monthly');return}
+ if(n==='catalog'||n==='mastered'){catalogFilter=n==='mastered'?'mastered':'all';catalogLimit=60;showWorkspace('catalog',n);return}
  showWorkspace('vocabulary',n);
- if(n==='mastered'){filter='mastered';document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x.dataset.filter==='mastered'));render();$('queue').scrollIntoView({behavior:'smooth'})}
- else if(n==='queue'||n==='analytics')$(n).scrollIntoView({behavior:'smooth'});
+ if(n==='queue'||n==='analytics')$(n).scrollIntoView({behavior:'smooth'});
 });
  $('login-form').onsubmit=async e=>{
   e.preventDefault();
