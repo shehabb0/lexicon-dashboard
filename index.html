@@ -879,6 +879,258 @@ async function showConjugation(wordId,force=false,mode='view'){
 }
 function closeConjugation(){conjugationRequest++;conjugationWordId=null;$('conjugation-overlay').classList.remove('open')}
 
+
+async function readGrammarLesson(pageId){
+ const blocks=[],tables=[],links=[],seen=new Set();
+ let visited=0,heading='';
+ async function visit(id,depth){
+  if(depth>5||visited>350)return;
+  const children=await retrieveChildren(id);
+  for(const block of children){
+   if(++visited>350)break;
+   const kind=block.type||'';
+   const data=block[kind]||{};
+   const text=textFromRich(data.rich_text||[]);
+   if(kind.startsWith('heading_')){
+    heading=text||heading;
+    if(text)blocks.push({kind:'heading',text,level:Number(kind.slice(-1))||3});
+    continue;
+   }
+   if(kind==='table'){
+    const children=await retrieveChildren(block.id);
+    const rows=children.filter(c=>c.type==='table_row').map(c=>(c.table_row?.cells||[]).map(cell=>textFromRich(cell)));
+    const table={title:heading||'Table '+(tables.length+1),rows,header:!!data.has_column_header,rowHeader:!!data.has_row_header};
+    tables.push(table);blocks.push({kind:'table',tableIndex:tables.length-1});
+    continue;
+   }
+   if(kind==='divider'){blocks.push({kind:'divider'});continue}
+   if(['paragraph','bulleted_list_item','numbered_list_item','quote','callout','toggle','code','to_do'].includes(kind)){
+    const meaningful=text||data.expression||'';
+    if(meaningful)blocks.push({kind:kind==='bulleted_list_item'?'bullet':kind==='numbered_list_item'?'number':kind==='to_do'?'bullet':kind==='toggle'?'heading':kind==='callout'?'quote':kind, text:meaningful,level:4});
+   }
+   if(kind==='equation'&&data.expression)blocks.push({kind:'paragraph',text:data.expression});
+   if(kind==='image')blocks.push({kind:'paragraph',text:'Image in the original Notion lesson — open Notion to view it.'});
+   if(kind==='child_page'||kind==='child_database'){
+    const name=data.title||'Linked lesson';
+    links.push({name,url:'https://www.notion.so/'+block.id.replaceAll('-','')});
+    blocks.push({kind:'link',name,url:links[links.length-1].url});
+    continue;
+   }
+   if(kind==='link_to_page'){
+    const target=data.page_id||data.database_id;
+    if(target){const url='https://www.notion.so/'+target.replaceAll('-','');blocks.push({kind:'link',name:'Linked Notion page',url});links.push({name:'Linked Notion page',url})}
+    continue;
+   }
+   if(block.has_children&&['column_list','column','toggle','callout','synced_block','bulleted_list_item','numbered_list_item','paragraph','quote'].includes(kind)&&!seen.has(block.id)){
+    seen.add(block.id);await visit(block.id,depth+1);
+   }
+  }
+ }
+ await visit(pageId,0);
+ return {blocks,tables,links};
+}
+function grammarTableMarkup(table,index){
+ const rows=table.rows||[];
+ if(!rows.length)return '';
+ const width=Math.max(...rows.map(r=>r.length),0),header=table.header;
+ const html=rows.map((row,i)=>'<tr>'+Array.from({length:width},(_,col)=>{
+  const isHeading=(i===0&&header)||(col===0&&table.rowHeader);
+  const content=esc(row[col]||'').split('\n').join('<br>');
+  return isHeading?'<th scope="'+(i===0?'col':'row')+'">'+content+'</th>':'<td>'+content+'</td>';
+ }).join('')+'</tr>');
+ return '<section class="conjugation-section"><h4>'+esc(table.title||'Table '+(index+1))+'</h4><div class="conjugation-table-wrap"><table class="conjugation-table">'+(header?'<thead>'+html[0]+'</thead><tbody>'+html.slice(1).join('')+'</tbody>':'<tbody>'+html.join('')+'</tbody>')+'</table></div></section>';
+}
+function renderGrammarLesson(lesson){
+ let out='';
+ for(const b of lesson.blocks){
+  const content=esc(b.text||'').split('\n').join('<br>');
+  if(b.kind==='heading'){out+='<h4>'+content+'</h4>';continue}
+  if(b.kind==='table'){out+=grammarTableMarkup(lesson.tables[b.tableIndex],b.tableIndex);continue}
+  if(b.kind==='bullet'){out+='<ul><li>'+content+'</li></ul>';continue}
+  if(b.kind==='number'){out+='<ol><li>'+content+'</li></ol>';continue}
+  if(b.kind==='quote'){out+='<blockquote class="conjugation-hint">'+content+'</blockquote>';continue}
+  if(b.kind==='divider'){out+='<hr style="border:0;border-top:1px solid #38516a;margin:17px 0">';continue}
+  if(b.kind==='link'){out+='<p><a href="'+esc(b.url)+'" target="_blank" rel="noopener noreferrer" style="color:var(--mint)">'+esc(b.name)+' ↗</a></p>';continue}
+  if(b.text)out+='<p>'+content+'</p>';
+ }
+ $('grammar-lesson-content').innerHTML=out||'<p class="conjugation-hint">There are no readable lesson blocks here yet. Open this lesson in Notion to inspect its content.</p>';
+}
+function setGrammarMode(mode){
+ grammarMode=mode;
+ for(const m of ['read','table','recall'])$('grammar-'+m).hidden=m!==mode;
+ document.querySelectorAll('[data-grammar-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.grammarTab===mode);b.setAttribute('aria-selected',String(b.dataset.grammarTab===mode))});
+}
+function grammarTables(){
+ return (grammarLesson?.tables||[]).map((table,index)=>({table,index})).filter(x=>x.table.rows.length>1&&Math.max(...x.table.rows.map(r=>r.length),0)>1);
+}
+function initGrammarTables(){
+ const picker=$('grammar-table-select');picker.replaceChildren();
+ for(const {table,index} of grammarTables()){
+  const o=document.createElement('option');o.value=String(index);o.textContent=table.title+' · Table '+(index+1);picker.appendChild(o);
+ }
+ if(picker.options.length){picker.value=picker.options[0].value}
+ renderGrammarColumnOptions();
+}
+function renderGrammarColumnOptions(){
+ const table=grammarLesson?.tables[Number($('grammar-table-select').value)];
+ const picker=$('grammar-column-select');picker.replaceChildren();
+ if(!table){renderGrammarQuestions();return}
+ const width=Math.max(0,...table.rows.map(r=>r.length));
+ const header=table.header?table.rows[0]:[];
+ for(let col=0;col<width;col++){
+  if(!table.rows.slice(table.header?1:0).some(row=>String(row[col]||'').trim()))continue;
+  const option=document.createElement('option');
+  option.value=String(col);
+  option.textContent=String(header[col]||'Column '+(col+1)).trim();
+  picker.appendChild(option);
+ }
+ if(picker.options.length)picker.value=picker.options[Math.min(1,picker.options.length-1)].value;
+ renderGrammarQuestions();
+}
+function renderGrammarQuestions(){
+ const table=grammarLesson?.tables[Number($('grammar-table-select').value)];
+ const area=$('grammar-questions');area.innerHTML='';
+ $('grammar-score').hidden=true;$('grammar-score').textContent='';
+ resetGrammarReveal();
+ $('grammar-check').disabled=!table;
+ $('grammar-retry').disabled=!table;
+ if(!table){area.innerHTML='<p class="conjugation-hint">No practiceable tables were found in this lesson. Try Read Lesson or Recall Rules instead.</p>';return}
+ const target=Number($('grammar-column-select').value);
+ const header=table.header?table.rows[0]:[];
+ const rows=table.rows.slice(table.header?1:0);
+ const questions=rows.map((cells,index)=>({cells,index})).filter(x=>String(x.cells[target]||'').trim()).slice(0,40);
+ if(!questions.length){area.innerHTML='<p class="conjugation-hint">Choose another column with example answers.</p>';return}
+ // Display only other columns; never render answers to the selected column in the quiz.
+ area.innerHTML=questions.map(({cells,index})=>{
+  const shown=cells.map((value,i)=>({value,i})).filter(c=>c.i!==target&&String(c.value||'').trim()).map(c=>'<p class="grammar-prompt"><strong>'+esc(String(header[c.i]||'Column '+(c.i+1)))+':</strong> '+esc(c.value)+'</p>').join('');
+  return '<div class="grammar-question" data-row="'+index+'"><div class="grammar-question-title">EXERCISE '+(index+1)+'</div>'+shown+
+    '<label for="grammar-answer-'+index+'">'+esc(String(header[target]||'Your answer'))+'</label><input id="grammar-answer-'+index+'" class="practice-answer grammar-answer" type="text" spellcheck="false" autocomplete="off" data-row="'+index+'" placeholder="Write your answer…" maxlength="2000"/><div class="grammar-feedback" id="grammar-feedback-'+index+'" aria-live="polite"></div></div>';
+ }).join('');
+}
+function grammarComparable(value){
+ return normalizeAnswer(value).replace(/[→⇒➜]/g,' to ').replace(/\s*(?:->|=>)\s*/g,' to ').replace(/\s*\/\s*/g,' / ').replace(/\s+/g,' ').trim();
+}
+function gradeGrammarValue(typed,expected){
+ const answer=grammarComparable(typed),ref=grammarComparable(expected);
+ if(!answer)return 'blank';
+ if(answer===ref)return 'correct';
+ if(withoutAccents(answer)===withoutAccents(ref))return 'close';
+ if(Math.abs(answer.length-ref.length)<=2&&answer.length>=4&&ref.length>=4&&typoDistance(answer,ref)<=(ref.length>=12?2:1))return 'close';
+ // Longer descriptions cannot be meaningfully judged by exact string comparison.
+ if(ref.length>90)return 'review';
+ return 'wrong';
+}
+function resetGrammarReveal(){
+ const button=$('grammar-reveal');button.hidden=true;button.textContent='👁 Show correct answers';button.setAttribute('aria-expanded','false');
+}
+function grammarAnswerFor(index){
+ const table=grammarLesson?.tables[Number($('grammar-table-select').value)];if(!table)return '';
+ const target=Number($('grammar-column-select').value);
+ return String(table.rows[(table.header?1:0)+index]?.[target]||'');
+}
+function checkGrammarTable(event){
+ event.preventDefault();
+ const inputs=[...$('grammar-questions').querySelectorAll('.grammar-answer')];
+ if(!inputs.some(x=>x.value.trim())){inputs[0]?.focus();return}
+ resetGrammarReveal();
+ let good=0,close=0,review=0;
+ for(const input of inputs){
+  const i=Number(input.dataset.row),ref=grammarAnswerFor(i);
+  const result=gradeGrammarValue(input.value,ref);
+  input.classList.toggle('correct',result==='correct');
+  input.classList.toggle('incorrect',result!=='correct');
+  const f=$('grammar-feedback-'+i);
+  f.dataset.status=result;f.dataset.row=String(i);
+  f.className='grammar-feedback '+(result==='correct'?'good':'bad');
+  f.textContent=result==='correct'?'✓ Correct':result==='close'?'△ Almost there':result==='review'?'◌ Compare this explanation with your notes':'✕ '+(result==='blank'?'Not answered':'Incorrect');
+  if(result==='correct')good++;
+  if(result==='close')close++;
+  if(result==='review')review++;
+ }
+ const summary=$('grammar-score');summary.hidden=false;
+ summary.className='quiz-feedback '+(good===inputs.length?'ok':good||close?'close':'wrong');
+ summary.textContent=good+' / '+inputs.length+' exact matches'+(close?' · '+close+' nearly correct':'')+(review?' · '+review+' explanations to self-check':'')+'.';
+ $('grammar-reveal').hidden=good===inputs.length;
+}
+function revealGrammarTableAnswers(){
+ const button=$('grammar-reveal');if(button.hidden)return;
+ const show=button.getAttribute('aria-expanded')!=='true';
+ button.setAttribute('aria-expanded',String(show));
+ button.textContent=show?'🙈 Hide correct answers':'👁 Show correct answers';
+ for(const f of $('grammar-questions').querySelectorAll('.grammar-feedback')){
+  if(f.dataset.status==='correct')continue;
+  const status=f.dataset.status;
+  f.textContent=show?'Notion: '+grammarAnswerFor(Number(f.dataset.row)):status==='close'?'△ Almost there':status==='review'?'◌ Compare this explanation with your notes':'✕ '+(status==='blank'?'Not answered':'Incorrect');
+ }
+}
+function grammarRecallSections(){
+ const sections=[];let current={title:'Main ideas',items:[]};
+ const save=()=>{if(current.items.length)sections.push(current)};
+ for(const b of grammarLesson?.blocks||[]){
+  if(b.kind==='heading'){save();current={title:b.text,items:[]};continue}
+  if(b.kind==='paragraph'||b.kind==='bullet'||b.kind==='number'||b.kind==='quote')current.items.push(b.text);
+  if(b.kind==='table'){
+   const table=grammarLesson.tables[b.tableIndex];
+   const excerpt=table.rows.slice(0,25).map(row=>row.join('  |  ')).join('\n');
+   if(excerpt){save();sections.push({title:table.title||'Grammar table',items:[excerpt]});current={title:'More notes',items:[]}}
+  }
+ }
+ save();
+ return sections.slice(0,40);
+}
+function initGrammarRecall(){
+ const picker=$('grammar-section-select');picker.replaceChildren();
+ for(const [i,sec] of grammarRecallSections().entries()){
+  const option=document.createElement('option');option.value=String(i);option.textContent=sec.title;picker.appendChild(option);
+ }
+ renderGrammarRecallQuestion();
+}
+function renderGrammarRecallQuestion(){
+ const section=grammarRecallSections()[Number($('grammar-section-select').value)];
+ $('grammar-recall-question').textContent=section?.title||'No readable rules or tables found';
+ $('grammar-recall-answer').value='';
+ $('grammar-recall-reference').hidden=true;$('grammar-recall-reference').textContent='';
+ $('grammar-recall-show').disabled=!section;
+}
+function revealGrammarRecall(){
+ const section=grammarRecallSections()[Number($('grammar-section-select').value)];if(!section)return;
+ const area=$('grammar-recall-reference');
+ const showing=area.hidden;
+ area.hidden=!showing;
+ area.className='quiz-feedback grammar-recall-reference';
+ area.textContent=showing?section.items.join('\n\n'):'';
+ $('grammar-recall-show').textContent=showing?'🙈 Hide original notes':'👁 Reveal notes to compare';
+}
+function clearGrammarRecall(){
+ renderGrammarRecallQuestion();$('grammar-recall-show').textContent='👁 Reveal notes to compare';
+ $('grammar-recall-answer').focus();
+}
+async function showGrammar(wordId,force=false){
+ const word=list.find(w=>w.id===wordId);
+ if(!word||typeKind(word.type)!=='grammar')return;
+ grammarWordId=wordId;
+ const req=++grammarRequest;
+ $('grammar-title').textContent=word.word;
+ $('grammar-desc').textContent='Loading your grammar lesson from Notion…';
+ $('grammar-notion-link').href=word.url||'https://www.notion.so/'+wordId.replaceAll('-','');
+ $('grammar-lesson-content').innerHTML='<p class="conjugation-hint">Loading original lesson…</p>';
+ $('grammar-overlay').classList.add('open');
+ $('grammar-refresh').disabled=true;
+ setGrammarMode('read');
+ try{
+  const lesson=(!force&&grammarCache.has(wordId))?grammarCache.get(wordId):await readGrammarLesson(wordId);
+  if(req!==grammarRequest||grammarWordId!==wordId)return;
+  grammarLesson=lesson;grammarCache.set(wordId,lesson);
+  renderGrammarLesson(lesson);initGrammarTables();initGrammarRecall();
+  $('grammar-desc').textContent=lesson.tables.length+' table'+(lesson.tables.length===1?'':'s')+' · '+lesson.blocks.length+' lesson sections/blocks from Notion';
+ }catch(error){
+  if(req!==grammarRequest)return;
+  grammarLesson=null;
+  $('grammar-lesson-content').textContent='Could not load the grammar lesson: '+error.message+'. Open the original Notion page below.';
+ }finally{if(req===grammarRequest)$('grammar-refresh').disabled=false}
+}
+function closeGrammar(){grammarRequest++;grammarWordId=null;$('grammar-overlay').classList.remove('open')}
+
 async function loadWords(silent=false){
  try {
   const words=await getAllWords();
