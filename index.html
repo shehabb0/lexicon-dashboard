@@ -1606,15 +1606,26 @@ async function setMonthDay(rowId,day,checked){
  }catch(err){row.days[day]=prior;toast('Could not save daily habit: '+err.message)}
  finally{monthWrites.delete(key);if(monthState===state)renderMonthWorkspace()}
 }
+async function appendMonthlyBlock(pageId,child,anchorId){
+ const path='/blocks/'+encodeURIComponent(pageId)+'/children';
+ const request={children:[child]};
+ if(!anchorId)return notion('PATCH',path,request);
+ try{
+  return await notion('PATCH',path,{...request,after:anchorId});
+ }catch(err){
+  if(err.status!==400)return Promise.reject(err);
+  // Newer Notion API versions may use an explicit position instead of "after".
+  return notion('PATCH',path,{...request,position:{type:'after_block',after_block:{id:anchorId}}});
+ }
+}
 async function addMonthGoal(event){
  event.preventDefault();if(!monthState)return;
  const input=$('month-add-goal'),value=input.value.trim();if(!value)return;
  const button=$('month-add-goal-form').querySelector('button');button.disabled=true;
  try{
   const anchor=monthState.blocks.filter(b=>b.type==='to_do').at(-1)?.id;
-  const body={children:[{object:'block',type:'to_do',to_do:{rich_text:[{type:'text',text:{content:value}}],checked:false}}]};
-  if(anchor)body.after=anchor;
-  await notion('PATCH','/blocks/'+encodeURIComponent(monthState.id)+'/children',body);
+  const child={object:'block',type:'to_do',to_do:{rich_text:[{type:'text',text:{content:value}}],checked:false}};
+  await appendMonthlyBlock(monthState.id,child,anchor);
   input.value='';await loadMonthPage(monthState.id);toast('Priority added to Notion ✓');
  }catch(err){toast('Could not add monthly priority: '+err.message)}
  finally{button.disabled=false}
@@ -1635,9 +1646,8 @@ async function addMonthResult(event){
  const input=form.querySelector('input'),value=input?.value.trim();if(!section?.headingId||!value)return;
  const button=form.querySelector('button');button.disabled=true;
  try{
-  const body={children:[{object:'block',type:'bulleted_list_item',bulleted_list_item:{rich_text:[{type:'text',text:{content:value}}]}}]};
-  body.after=section.lastId||section.headingId;
-  await notion('PATCH','/blocks/'+encodeURIComponent(monthState.id)+'/children',body);
+  const child={object:'block',type:'bulleted_list_item',bulleted_list_item:{rich_text:[{type:'text',text:{content:value}}]}};
+  await appendMonthlyBlock(monthState.id,child,section.lastId||section.headingId);
   input.value='';await loadMonthPage(monthState.id);toast(key+' added to Notion ✓');
  }catch(err){toast('Could not add result: '+err.message)}
  finally{button.disabled=false}
