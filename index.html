@@ -1017,7 +1017,7 @@ function gradeGrammarValue(typed,expected){
  if(withoutAccents(answer)===withoutAccents(ref))return 'close';
  if(Math.abs(answer.length-ref.length)<=2&&answer.length>=4&&ref.length>=4&&typoDistance(answer,ref)<=(ref.length>=12?2:1))return 'close';
  // Longer descriptions cannot be meaningfully judged by exact string comparison.
- if(ref.length>90)return 'review';
+ if(ref.length>90||ref.split(/\s+/).length>=6)return 'review';
  return 'wrong';
 }
 function resetGrammarReveal(){
