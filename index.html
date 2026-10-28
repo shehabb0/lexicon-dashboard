@@ -455,10 +455,10 @@ function translationVariants(reference){
 }
 function reverseWordVariants(reference){
  const raw=String(reference??'').trim();
- const parts=splitAnswerAlternatives(raw);
- const all=new Set([raw,...parts]);
- // Notion commonly abbreviates Italian masculine/feminine pairs: "figlio/a" = figlio or figlia.
+ // Abbreviated gender suffixes are NOT independently valid words ("figlio/a" does not accept "a").
  const gender=raw.match(/^(.+?)([oaie])\/([oaie])$/i);
+ const parts=gender?[]:splitAnswerAlternatives(raw);
+ const all=new Set([raw,...parts]);
  if(gender){
   all.add(gender[1]+gender[2]);
   all.add(gender[1]+gender[3]);
@@ -509,7 +509,7 @@ function evaluateAnswer(typed,expected,kind='translation',prompt=''){
   }
  }
  if(variants.some(v=>withoutAccents(v)===withoutAccents(answer)))return {state:'close',expected,reason:'Check the accents or spelling marks.'};
- if(variants.some(v=>v.length>=5&&answer.length>=5&&typoDistance(v,answer)<=(v.length>=12?2:1)))return {state:'close',expected,reason:'Check the spelling.'};
+ if(variants.some(v=>v.length>=4&&answer.length>=4&&typoDistance(v,answer)<=(v.length>=12?2:1)))return {state:'close',expected,reason:'Check the spelling.'};
  return {state:'wrong',expected};
 }
 function hideTranslationAnswerReveal(){
