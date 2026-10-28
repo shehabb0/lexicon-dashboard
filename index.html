@@ -434,6 +434,9 @@ function translationVariants(reference){
  const parts=splitAnswerAlternatives(raw);
  const candidates=new Set([raw,...parts]);
  if(parts.length>1&&parts.length<=5){
+  const bareParts=parts.map(stripStudyArticle);
+  candidates.add(bareParts.join(' ')); // Allow "fils fille" for "le fils / la fille".
+  if(parts.length===2)candidates.add(bareParts[1]+' '+bareParts[0]);
   candidates.add(parts.join(' '));       // "Fils Fille"
   candidates.add(parts.join(' / '));     // "Fils / Fille"
   candidates.add(parts.join('/'));       // "Fils/Fille"
@@ -485,8 +488,16 @@ function answerVariants(reference,kind='translation',prompt=''){
  }
  return [...all].map(normalizeAnswer).filter(Boolean);
 }
-function stripFrenchArticle(value){
- return value.replace(/^(?:(?:de la|de l'|les|des|une|un|du|la|le)(?=\s|$)|l')\s*/i,'').trim();
+function stripStudyArticle(value){
+ const text=normalizeAnswer(value);
+ // French and Italian articles (definite, indefinite and common partitives).
+ // Keep the original when it consists only of an article.
+ const bare=text.replace(/^(?:(?:de la|de l'|dello|della|degli|delle|dell|dei|del|des|les|une|uno|una|gli|du|un|il|lo|la|le|i|un')\s+|(?:l'|un'|dell'|de l')\s*)/i,'').trim();
+ return bare||text;
+}
+function studyAnswerWithoutArticles(value){
+ const parts=splitAnswerAlternatives(value);
+ return parts.length>1?parts.map(stripStudyArticle).join(' ').trim():stripStudyArticle(value);
 }
 function typoDistance(a,b){
  if(Math.abs(a.length-b.length)>2)return 99;
@@ -502,10 +513,12 @@ function evaluateAnswer(typed,expected,kind='translation',prompt=''){
  const variants=answerVariants(expected,kind,prompt);
  if(!answer||!variants.length)return {state:'blank',expected};
  if(variants.includes(answer))return {state:'correct',expected};
- if(kind==='translation'){
-  const withoutArticle=stripFrenchArticle(answer);
-  if(withoutArticle&&variants.some(v=>withoutAccents(stripFrenchArticle(v))===withoutAccents(withoutArticle)&&v!==answer)){
-   return {state:'close',expected,reason:'You have the right word! Check the article or accent marks.'};
+ if(kind==='translation'||kind==='reverse'){
+  // Articles never determine whether a vocabulary answer passes.
+  const bare=studyAnswerWithoutArticles(answer);
+  if(bare&&variants.some(v=>studyAnswerWithoutArticles(v)===bare))return {state:'correct',expected};
+  if(bare&&variants.some(v=>withoutAccents(studyAnswerWithoutArticles(v))===withoutAccents(bare))){
+   return {state:'close',expected,reason:'Check the accents or spelling marks.'};
   }
  }
  if(variants.some(v=>withoutAccents(v)===withoutAccents(answer)))return {state:'close',expected,reason:'Check the accents or spelling marks.'};
