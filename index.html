@@ -712,6 +712,7 @@ async function recordHistoryAction(word,action){
  if(!saved?.id||!historyEvents.some(event=>event.id===saved.id)){
   historyEvents.push({id:saved?.id||null,when:reviewedAt});
  }
+ historyError='';
  renderActivity();
  renderHeat();
 }
