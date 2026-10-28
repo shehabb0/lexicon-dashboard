@@ -68,6 +68,26 @@
 #table-review-footer[hidden],#table-review-notice[hidden]{display:none!important}
 .grammar-modal.word-table-compact #table-review-footer{margin-top:12px;padding-top:11px;gap:10px}
 .grammar-modal.word-table-compact #table-review-notice{margin:7px 0 0}
+/* Vocabulary library — independent from the scheduled review queue. */
+#catalog-workspace[hidden]{display:none!important}
+#flash-review-actions[hidden],#flash-review-note[hidden],#conjugation-review-footer[hidden]{display:none!important}
+.catalog-hero{border:1px solid #34556b;border-radius:22px;display:flex;justify-content:space-between;align-items:center;gap:24px;padding:27px 32px;margin-bottom:20px;background:radial-gradient(ellipse at 90% 10%,#6967bc42,transparent 65%),linear-gradient(115deg,#152c38,#242642)}
+.catalog-hero h1{font-size:clamp(27px,3vw,37px);line-height:1.18;letter-spacing:-1px;margin:10px 0}.catalog-hero h1 em{font-style:normal;color:#b9b0ff}.catalog-hero p{max-width:580px;color:#b3c2dd;font-size:12px;line-height:1.7;margin:0}
+.catalog-count{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid #5b5d85;background:#302d5350;border-radius:17px;min-width:116px;padding:18px 12px;flex-shrink:0}
+.catalog-count strong{color:#e7dcff;font-size:32px;line-height:1.1}.catalog-count span{font-size:9px;letter-spacing:1.4px;color:#b8b4d6;font-weight:750}
+.catalog-content{background:linear-gradient(145deg,#121d31,#101a2c);border:1px solid var(--stroke);border-radius:19px;padding:22px;min-width:0}
+.catalog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+.catalog-head h2{font-size:18px;letter-spacing:-.4px;margin:0 0 4px}.catalog-head p{max-width:410px;color:#8ea1be;font-size:11px;line-height:1.65;margin:0}
+.catalog-controls{display:flex;justify-content:flex-end;align-items:center;gap:7px;flex-wrap:wrap}.catalog-controls .filter{white-space:nowrap}
+.catalog-search{max-width:250px;min-width:165px}
+.catalog-table-wrap{background:#101b2d;border:1px solid #293b54;border-radius:13px;overflow:hidden}
+.catalog-row{display:grid;grid-template-columns:minmax(130px,1.2fr) minmax(135px,1.3fr) minmax(90px,.65fr) 54px 76px;gap:13px;align-items:center;padding:13px 17px;border-top:1px solid var(--stroke)}
+.catalog-row:first-child{border-top:0}.catalog-header{background:#1c2943;color:#8094b2;font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.catalog-word{font-size:12px;font-weight:750;color:#ecf3ff;overflow-wrap:anywhere}.catalog-translation{font-size:11.5px;color:#b8c8e2;white-space:pre-wrap;overflow-wrap:anywhere}
+.catalog-category{font-size:10px;color:#a99dce}.catalog-meta{color:#8597b1;font-size:10px;margin-top:3px}
+.catalog-foot{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-top:15px;color:#8395b2;font-size:10px;flex-wrap:wrap}.catalog-foot .import-btn{font-size:11px;padding:8px 12px}
+@media(max-width:1150px){.catalog-head{flex-direction:column}.catalog-controls{justify-content:flex-start}}
+@media(max-width:620px){.catalog-hero{padding:21px;gap:10px}.catalog-count{min-width:75px;padding:13px 8px}.catalog-count strong{font-size:24px}.catalog-count span{letter-spacing:.5px;font-size:8px}.catalog-content{padding:13px}.catalog-row{grid-template-columns:minmax(0,1.15fr) minmax(0,1.1fr) 64px;gap:8px;padding:12px 9px}.catalog-row>*:nth-child(3),.catalog-row>*:nth-child(4){display:none}.catalog-controls{gap:5px}.catalog-search{max-width:100%;flex:1;min-width:145px}}
 </style>
 </head>
 <body>
@@ -89,7 +109,8 @@
   <nav aria-label="Main navigation">
     <div class="nav-label">Workspace</div>
     <button class="navlink active" data-nav="overview"><svg><use href="#i-grid"/></svg><span class="navtxt">Overview</span></button>
-    <button class="navlink" data-nav="queue"><svg><use href="#i-book"/></svg><span class="navtxt">Review queue</span><span class="navnumber" id="side-due">0</span></button>
+    <button class="navlink" data-nav="catalog"><svg><use href="#i-book"/></svg><span class="navtxt">Vocabulary</span><span class="navnumber" id="side-vocab-count">0</span></button>
+    <button class="navlink" data-nav="queue"><svg><use href="#i-clock"/></svg><span class="navtxt">Review queue</span><span class="navnumber" id="side-due">0</span></button>
     <button class="navlink" data-nav="analytics"><svg><use href="#i-chart"/></svg><span class="navtxt">Analytics</span></button>
     <button class="navlink" data-nav="mastered"><svg><use href="#i-award"/></svg><span class="navtxt">Mastered words</span></button>
     <div class="nav-label monthly-nav-label">Monthly Life</div>
@@ -120,10 +141,34 @@
   <article class="panel"><div class="panel-head"><div><h2>Study consistency</h2><div class="subtitle" id="heat-sub">Your recent learning days</div></div><div class="chip">12 weeks</div></div><div class="heatmap-grid" id="heatmap"></div><div class="heatcaption"><span>Less</span><span class="sq" style="background:#1d2a3c"></span><span class="sq" style="background:#285a54"></span><span class="sq" style="background:#397b69"></span><span class="sq" style="background:#5bc29b"></span><span class="sq" style="background:#9af2c7"></span><span>More</span><span class="heat-caption-tail" id="streakline"></span></div></article>
   <article class="panel"><div class="panel-head"><div><h2>Learning levels</h2><div class="subtitle">Where your vocabulary stands</div></div><div class="chip">Classes 1–10</div></div><div style="margin:9px 0 2px;font-size:11px;color:#99adc4">Filter by language</div><div class="tagcloud"><button class="language-chip selected" data-lang="All">✦ All languages</button><button class="language-chip" data-lang="French">🇫🇷 French</button><button class="language-chip" data-lang="Italian">🇮🇹 Italian</button></div><div id="class-chart"></div></article>
  </section>
- <section class="queue" id="queue"><div class="queue-head"><div><div class="queue-title">Your review queue <span style="color:var(--mint)">✦</span></div><div class="queue-sub">The next words worth your attention.</div></div><div class="controls"><button class="filter active" data-filter="due">Due now</button><button class="filter" data-filter="words">All words</button><button class="filter" data-filter="verbs">All verbs</button><button class="filter" data-filter="grammar">Grammar</button><button class="filter" data-filter="everything">Everything</button><button class="filter" data-filter="mastered">Mastered</button><input class="search" id="search" placeholder="⌕  Search vocabulary" aria-label="Search vocabulary" /></div></div><div class="queue-card"><div class="qrow header"><div id="queue-prompt-label">Word / phrase</div><div id="queue-answer-label">Translation</div><div>Status</div><div>Level</div><div>Action</div></div><div id="queue-rows"></div></div><div style="text-align:center;padding:14px 0 4px"><button id="queue-more" type="button" class="import-btn" hidden>Show more words ↓</button></div><div class="bottom-note"><span id="rows-count">Showing words</span><span>Synced with Notion · refreshes every minute</span></div></section>
+ <section class="queue" id="queue"><div class="queue-head"><div><div class="queue-title">Your review queue <span style="color:var(--mint)">✦</span></div><div class="queue-sub">Only words due or overdue for review. Browse the complete collection in Vocabulary.</div></div><div class="controls"><input class="search" id="search" placeholder="⌕  Search due words" aria-label="Search due words" /></div></div><div class="queue-card"><div class="qrow header"><div id="queue-prompt-label">Word / phrase</div><div id="queue-answer-label">Translation</div><div>Status</div><div>Level</div><div>Action</div></div><div id="queue-rows"></div></div><div style="text-align:center;padding:14px 0 4px"><button id="queue-more" type="button" class="import-btn" hidden>Show more words ↓</button></div><div class="bottom-note"><span id="rows-count">Showing words</span><span>Synced with Notion · refreshes every minute</span></div></section>
  <div style="text-align:center;color:#4e617f;margin-top:38px;font-size:10px;letter-spacing:2px">LEXICON STUDIO · LEARN BEAUTIFULLY</div>
 
  </div>
+ <section id="catalog-workspace" class="catalog-workspace" aria-label="Vocabulary library" hidden>
+  <div class="catalog-hero">
+   <div><div class="section-eyebrow">YOUR COMPLETE NOTION LIBRARY ✦</div><h1>Vocabulary <em>library.</em></h1><p>Every word in one place—words, verbs, and grammar. Browse, recall, and practise whenever you like, without changing your review schedule.</p></div>
+   <div class="catalog-count"><strong id="catalog-total-count">0</strong><span>TOTAL ENTRIES</span></div>
+  </div>
+  <div class="catalog-content">
+   <div class="catalog-head">
+    <div><h2 id="catalog-heading">All vocabulary</h2><p>Browse translations, open flashcards, and practise Notion tables or conjugations. Study here without marking words reviewed.</p></div>
+    <div class="catalog-controls">
+     <button type="button" class="filter active" data-catalog-filter="all">All</button>
+     <button type="button" class="filter" data-catalog-filter="words">Words</button>
+     <button type="button" class="filter" data-catalog-filter="verbs">Verbs</button>
+     <button type="button" class="filter" data-catalog-filter="grammar">Grammar</button>
+     <button type="button" class="filter" data-catalog-filter="mastered">Mastered</button>
+     <input type="search" class="search catalog-search" id="catalog-search" placeholder="⌕  Find a word…" aria-label="Search all vocabulary" autocomplete="off" />
+    </div>
+   </div>
+   <div class="catalog-table-wrap">
+    <div class="catalog-row catalog-header"><div>Word / phrase</div><div>Translation</div><div>Category</div><div>Class</div><div>Study</div></div>
+    <div id="catalog-rows"></div>
+   </div>
+   <div class="catalog-foot"><span id="catalog-rows-count">Showing vocabulary</span><button id="catalog-more" type="button" class="import-btn" hidden>Show more ↓</button><span>View &amp; practise only · Notion synced</span></div>
+  </div>
+ </section>
  <section id="monthly-workspace" class="monthly-workspace" aria-label="Monthly life tracker" hidden>
   <div class="month-hero">
    <div><div class="section-eyebrow">YOUR MONTHLY LIFE STUDIO · NOTION SYNCED</div><h1>Make the month <em>count.</em></h1><p>One space for your priorities, daily routines, films, reading and everything you're building outside vocabulary.</p></div>
@@ -182,7 +227,7 @@
   <div id="translation-feedback" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
   <div id="translation-correct-answer" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
  </form>
-</div><div class="flashrow"><button class="modalbutton danger" id="forgot">↶ Forgot it</button><button class="modalbutton green" id="remembered">✓ Mark reviewed</button><button class="modalbutton purple" id="master-word">✦ Mastered</button></div><div class="modal-note">These actions update your actual Notion word. Use carefully.</div></div></div>
+</div><div class="flashrow" id="flash-review-actions"><button class="modalbutton danger" id="forgot">↶ Forgot it</button><button class="modalbutton green" id="remembered">✓ Mark reviewed</button><button class="modalbutton purple" id="master-word">✦ Mastered</button></div><div class="modal-note" id="flash-review-note">These actions update your actual Notion word. Use carefully.</div></div></div>
 <div class="overlay" id="review-complete-overlay" role="dialog" aria-modal="true" aria-labelledby="review-complete-title" style="z-index:24">
  <div class="flash review-complete-card">
   <button class="close" id="review-complete-close" type="button" aria-label="Close review summary">×</button>
@@ -206,7 +251,7 @@
     <div class="practice-footer"><button class="quiz-check" id="check-conjugation" type="submit">✓ Check conjugation</button><button class="quiz-secondary" id="retry-conjugation" type="button">Try again</button><button class="practice-switch" id="reveal-conjugation-answers" type="button" hidden aria-expanded="false">👁 Show correct answers</button></div>
     <div id="practice-summary" class="quiz-feedback" role="status" aria-live="polite" hidden></div>
   </form>
-  <div class="practice-footer practice-review-footer"><button type="button" id="practice-mark-reviewed" class="modalbutton green">✓ Mark Reviewed</button><span class="practice-review-hint">Save this verb's review to Notion and continue to the next due item.</span></div>
+  <div class="practice-footer practice-review-footer" id="conjugation-review-footer"><button type="button" id="practice-mark-reviewed" class="modalbutton green">✓ Mark Reviewed</button><span class="practice-review-hint">Save this verb's review to Notion and continue to the next due item.</span></div>
   <p class="practice-notice">Checking answers is practice only. Mark Reviewed saves your review and updates your Notion schedule.</p>
 </div>
 <div id="conjugation-content" aria-live="polite"><p class="conjugation-hint">Loading conjugation…</p></div>
