@@ -1090,7 +1090,7 @@ function renderGrammarRecallQuestion(){
  $('grammar-recall-question').textContent=section?.title||'No readable rules or tables found';
  $('grammar-recall-answer').value='';
  $('grammar-recall-reference').hidden=true;$('grammar-recall-reference').textContent='';
- $('grammar-recall-show').disabled=!section;
+ $('grammar-recall-show').disabled=!section;$('grammar-recall-show').textContent='👁 Reveal notes to compare';
 }
 function revealGrammarRecall(){
  const section=grammarRecallSections()[Number($('grammar-section-select').value)];if(!section)return;
@@ -1180,6 +1180,25 @@ $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('clear-translation').onclick=()=>{resetTranslationPractice(list.find(w=>w.id===selectedId));$('translation-attempt').focus()};
  $('reveal-translation-answer').onclick=toggleTranslationAnswer;
  $('translation-attempt').addEventListener('input',resetTranslationFeedback);
+ $('study-grammar').onclick=()=>{if(selectedId)showGrammar(selectedId)};
+ $('grammar-close').onclick=closeGrammar;
+ $('grammar-overlay').onclick=e=>{if(e.target===$('grammar-overlay'))closeGrammar()};
+ $('grammar-refresh').onclick=()=>{if(grammarWordId)showGrammar(grammarWordId,true)};
+ document.querySelectorAll('[data-grammar-tab]').forEach(button=>button.onclick=()=>setGrammarMode(button.dataset.grammarTab));
+ $('grammar-table-select').onchange=renderGrammarColumnOptions;
+ $('grammar-column-select').onchange=renderGrammarQuestions;
+ $('grammar-table-form').addEventListener('submit',checkGrammarTable);
+ $('grammar-retry').onclick=()=>{renderGrammarQuestions();$('grammar-questions').querySelector('.grammar-answer')?.focus()};
+ $('grammar-reveal').onclick=revealGrammarTableAnswers;
+ $('grammar-questions').addEventListener('input',e=>{if(e.target.classList.contains('grammar-answer')){
+  $('grammar-score').hidden=true;$('grammar-score').textContent='';
+  resetGrammarReveal();
+  $('grammar-questions').querySelectorAll('.grammar-answer').forEach(input=>input.classList.remove('correct','incorrect'));
+  $('grammar-questions').querySelectorAll('.grammar-feedback').forEach(label=>{label.textContent='';label.className='grammar-feedback';delete label.dataset.status});
+ }});
+ $('grammar-section-select').onchange=renderGrammarRecallQuestion;
+ $('grammar-recall-show').onclick=revealGrammarRecall;
+ $('grammar-recall-retry').onclick=clearGrammarRecall;
  $('show-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId,false,'view')};
  $('practice-conjugation').onclick=()=>{if(selectedId)showConjugation(selectedId,false,'practice')};
  $('switch-conjugation-practice').onclick=()=>{setConjugationMode('practice');renderPracticeFields()};
@@ -1193,7 +1212,7 @@ $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('conjugation-refresh').onclick=()=>{if(conjugationWordId)showConjugation(conjugationWordId,true,conjugationMode)};
  $('conjugation-overlay').onclick=e=>{if(e.target===$('conjugation-overlay'))closeConjugation()};
  $('flip').onclick=()=>{const a=$('flash-answer'),ex=$('flash-example');const hidden=a.classList.toggle('hidden');ex.classList.toggle('hidden',hidden);a.setAttribute('aria-hidden',String(hidden));ex.setAttribute('aria-hidden',String(hidden));$('flip').textContent=hidden?'Reveal translation':'Hide translation'};
-$('close').onclick=()=>$('overlay').classList.remove('open');$('overlay').onclick=e=>{if(e.target===$('overlay'))$('overlay').classList.remove('open')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('conjugation-overlay').classList.contains('open'))closeConjugation();else{$('overlay').classList.remove('open');$('add-overlay').classList.remove('open')}}});
+$('close').onclick=()=>$('overlay').classList.remove('open');$('overlay').onclick=e=>{if(e.target===$('overlay'))$('overlay').classList.remove('open')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('grammar-overlay').classList.contains('open'))closeGrammar();else if($('conjugation-overlay').classList.contains('open'))closeConjugation();else{$('overlay').classList.remove('open');$('add-overlay').classList.remove('open')}}});
 $('forgot').onclick=()=>act('forgot');$('remembered').onclick=()=>act('remember');$('master-word').onclick=()=>act('master');
 $('queue-more').onclick=()=>{queueLimit+=30;render()};
  $('search').oninput=e=>{search=e.target.value.toLowerCase().trim();queueLimit=24;render()};document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;queueLimit=24;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()});document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;document.querySelectorAll('[data-lang]').forEach(x=>x.classList.toggle('selected',x===b));render()});
