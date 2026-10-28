@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Lexicon L logo</title>
+  <defs>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2d6953"/>
+      <stop offset="1" stop-color="#12382e"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a3e4c5"/>
+      <stop offset="1" stop-color="#79cbaa"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="17" fill="#f3faf4"/>
+  <path d="M15 15c0-6 4.4-10.4 10-10.4S35 9 35 15v23h11c5.8 0 10 4.6 10 10.3S51.8 58.5 46 58.5H25c-5.8 0-10-4.4-10-10.2V15Z" fill="url(#leaf)"/>
+  <circle cx="45.5" cy="47.2" r="11.2" fill="url(#mint)"/>
+</svg>
