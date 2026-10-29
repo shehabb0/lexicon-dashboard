@@ -88,6 +88,7 @@
 .catalog-foot{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-top:15px;color:#8395b2;font-size:10px;flex-wrap:wrap}.catalog-foot .import-btn{font-size:11px;padding:8px 12px}
 @media(max-width:1150px){.catalog-head{flex-direction:column}.catalog-controls{justify-content:flex-start}}
 @media(max-width:620px){.catalog-hero{padding:21px;gap:10px}.catalog-count{min-width:75px;padding:13px 8px}.catalog-count strong{font-size:24px}.catalog-count span{letter-spacing:.5px;font-size:8px}.catalog-content{padding:13px}.catalog-row{grid-template-columns:minmax(0,1.5fr) minmax(0,.8fr) 74px;gap:8px;padding:12px 9px}.catalog-row>*:nth-child(3){display:none}.catalog-controls{gap:5px}.catalog-search{max-width:100%;flex:1;min-width:145px}}
+.grammar-tabs[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -216,7 +217,7 @@
   </div>
  </section>
 </main></div>
-<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="Vocabulary flashcard"><div class="flash flashcard-scroll"><button class="close" id="close" aria-label="Close">×</button><div class="flash-label" id="flash-label">FRENCH · CLASS 1</div><h3 id="flash-word">Bonjour</h3><div id="flash-answer" class="translation hidden" aria-hidden="true">Good morning</div><div class="study-tools"><button id="flip" class="toggle">Reveal translation</button><button id="show-conjugation" class="toggle conjugation-button" type="button" hidden>📖 Show Conjugation</button><button id="practice-conjugation" class="toggle conjugation-button" type="button" hidden>✍ Practice Conjugation</button><button id="study-grammar" class="toggle grammar-launch" type="button" hidden>📚 Study Grammar</button><button id="practice-word-table" class="toggle grammar-launch" type="button" hidden>✍ Practice Table</button></div>
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="Vocabulary flashcard"><div class="flash flashcard-scroll"><button class="close" id="close" aria-label="Close">×</button><div class="flash-label" id="flash-label">FRENCH · CLASS 1</div><h3 id="flash-word">Bonjour</h3><div id="flash-answer" class="translation hidden" aria-hidden="true">Good morning</div><div class="study-tools"><button id="flip" class="toggle">Reveal translation</button><button id="show-conjugation" class="toggle conjugation-button" type="button" hidden>📖 Show Conjugation</button><button id="practice-conjugation" class="toggle conjugation-button" type="button" hidden>✍ Practice Conjugation</button><button id="study-grammar" class="toggle grammar-launch" type="button" hidden>📖 Study Grammar</button><button id="practice-grammar" class="toggle grammar-launch" type="button" hidden>📝 Practice Grammar</button><button id="practice-word-table" class="toggle grammar-launch" type="button" hidden>✍ Practice Table</button></div>
 <div class="quiz-panel" id="translation-quiz">
  <h4 class="quiz-title" id="translation-quiz-title">✍ Test your translation</h4><p class="quiz-caption" id="translation-quiz-caption">Write the meaning from memory, then check it against your Notion translation.</p>
  <form id="translation-quiz-form">
@@ -262,7 +263,7 @@
  <div class="flash-label" id="grammar-studio-label">YOUR GRAMMAR STUDIO · NOTION</div>
  <h3 id="grammar-title">Grammar lesson</h3>
  <p class="conjugation-desc" id="grammar-desc">Study and practise your original Notion lesson.</p>
- <div class="grammar-tabs" role="tablist" aria-label="Grammar study mode">
+ <div class="grammar-tabs" id="grammar-tabs" role="tablist" aria-label="Table study mode">
   <button type="button" data-grammar-tab="read" class="grammar-tab active" id="grammar-read-tab">📖 Read lesson</button>
   <button type="button" data-grammar-tab="table" class="grammar-tab" id="grammar-table-tab">✍ Practice tables</button>
   <button type="button" data-grammar-tab="recall" class="grammar-tab" id="grammar-recall-tab">🧠 Recall rules</button>
@@ -716,6 +717,7 @@ function openWord(id,fromReviewSession=false,viewOnly=false){
  $('show-conjugation').hidden=typeKind(w.type)!=='verb';
  $('practice-conjugation').hidden=typeKind(w.type)!=='verb';
  $('study-grammar').hidden=!isGrammar;
+ $('practice-grammar').hidden=!isGrammar;
  $('practice-word-table').hidden=isGrammar||!isTableEntry(w);
  $('translation-quiz').hidden=isGrammar;
  $('flip').hidden=isGrammar;
@@ -1377,7 +1379,7 @@ function renderGrammarQuestions(){
    const word=list.find(w=>w.id===grammarWordId);
    area.innerHTML=isTableEntry(word)
     ?'<p class="conjugation-hint">No practiceable table was found on this word’s Notion page. Add a simple table block inside the page, then click Refresh lesson below.</p>'
-    :'<p class="conjugation-hint">No practiceable tables were found in this lesson. Try Read Lesson or Recall Rules instead.</p>';
+    :'<p class="conjugation-hint">There are no practiceable tables in this lesson. Use Practice Grammar to recall its rules instead.</p>';
    return;
  }
  const target=Number($('grammar-column-select').value);
@@ -1505,10 +1507,11 @@ async function showGrammar(wordId,force=false,requestedMode='read'){
  $('grammar-title').textContent=isWordTable?word.word+' · Table practice':word.word;
  $('grammar-read-tab').textContent=isWordTable?'📖 View original table':'📖 Read lesson';
  $('grammar-table-tab').textContent=isWordTable?'✍ Practice table':'✍ Practice tables';
+ $('grammar-tabs').hidden=!isWordTable;
  $('grammar-recall-tab').hidden=isWordTable;
  $('table-review-footer').hidden=!isWordTable||studyOnly;
  $('table-review-notice').hidden=!isWordTable||studyOnly;
- $('grammar-desc').textContent=isWordTable?'Loading the table from this word’s Notion page…':'Loading your grammar lesson from Notion…';
+ $('grammar-desc').textContent=isWordTable?'Loading the table from this word’s Notion page…':requestedMode==='read'?'Loading your grammar lesson from Notion…':'Preparing your grammar practice from Notion…';
  $('grammar-notion-link').href=word.url||'https://www.notion.so/'+wordId.replaceAll('-','');
  $('grammar-lesson-content').innerHTML='<p class="conjugation-hint">Loading original Notion content…</p>';
  grammarLesson=null;
@@ -1518,16 +1521,24 @@ async function showGrammar(wordId,force=false,requestedMode='read'){
  resetGrammarReveal();
  $('grammar-overlay').classList.add('open');
  $('grammar-refresh').disabled=true;
- setGrammarMode(isWordTable?(requestedMode==='read'?'read':'table'):(requestedMode==='table'?'table':'read'));
+ setGrammarMode(isWordTable?(requestedMode==='read'?'read':'table'):(requestedMode==='read'?'read':requestedMode==='recall'?'recall':'table'));
  try{
   const lesson=(!force&&grammarCache.has(wordId))?grammarCache.get(wordId):await readGrammarLesson(wordId);
   if(req!==grammarRequest||grammarWordId!==wordId)return;
   grammarLesson=lesson;grammarCache.set(wordId,lesson);
   renderGrammarLesson(lesson);initGrammarTables();
-  if(!isWordTable)initGrammarRecall();
+  if(!isWordTable){
+   initGrammarRecall();
+   if(requestedMode!=='read'){
+    // Grammar Practice goes straight to an exercise: tables if present, otherwise recall the rules.
+    setGrammarMode(requestedMode==='recall'||!grammarTables().length?'recall':'table');
+   }
+  }
   $('grammar-desc').textContent=isWordTable
    ?lesson.tables.length+' Notion table'+(lesson.tables.length===1?'':'s')+' found · Choose a column and fill in the missing cells.'
-   :lesson.tables.length+' table'+(lesson.tables.length===1?'':'s')+' · '+lesson.blocks.length+' lesson sections/blocks from Notion';
+   :grammarMode==='read'?'Read your original lesson from Notion · '+lesson.blocks.length+' sections and blocks'
+   :grammarMode==='recall'?'🧠 Recall the grammar rules from memory, then reveal your notes.'
+   :'📝 Complete the grammar table exercises and check your answers.';
  }catch(error){
   if(req!==grammarRequest)return;
   grammarLesson=null;
@@ -1928,7 +1939,8 @@ $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('clear-translation').onclick=()=>{resetTranslationPractice(list.find(w=>w.id===selectedId));$('translation-attempt').focus()};
  $('reveal-translation-answer').onclick=toggleTranslationAnswer;
  $('translation-attempt').addEventListener('input',resetTranslationFeedback);
- $('study-grammar').onclick=()=>{if(selectedId)showGrammar(selectedId)};
+ $('study-grammar').onclick=()=>{if(selectedId)showGrammar(selectedId,false,'read')};
+ $('practice-grammar').onclick=()=>{if(selectedId)showGrammar(selectedId,false,'practice')};
  $('practice-word-table').onclick=()=>{if(selectedId)showGrammar(selectedId,false,'table')};
  $('grammar-close').onclick=closeGrammar;
  $('grammar-overlay').onclick=e=>{if(e.target===$('grammar-overlay'))closeGrammar()};
