@@ -139,7 +139,7 @@
  </section>
  <section class="lowergrid">
   <article class="panel"><div class="panel-head"><div><h2>Study consistency</h2><div class="subtitle" id="heat-sub">Your recent learning days</div></div><div class="chip">12 weeks</div></div><div class="heatmap-grid" id="heatmap"></div><div class="heatcaption"><span>Less</span><span class="sq" style="background:#1d2a3c"></span><span class="sq" style="background:#285a54"></span><span class="sq" style="background:#397b69"></span><span class="sq" style="background:#5bc29b"></span><span class="sq" style="background:#9af2c7"></span><span>More</span><span class="heat-caption-tail" id="streakline"></span></div></article>
-  <article class="panel"><div class="panel-head"><div><h2>Learning levels</h2><div class="subtitle">Where your vocabulary stands</div></div><div class="chip">Classes 1–10</div></div><div style="margin:9px 0 2px;font-size:11px;color:#99adc4">Filter by language</div><div class="tagcloud"><button class="language-chip selected" data-lang="All">🌍 All languages</button><button class="language-chip" data-lang="French">🥐 French</button><button class="language-chip" data-lang="Italian">🍝 Italian</button></div><div id="class-chart"></div></article>
+  <article class="panel"><div class="panel-head"><div><h2>Learning levels</h2><div class="subtitle">Where your vocabulary stands</div></div><div class="chip">Classes 1–10</div></div><div style="margin:9px 0 2px;font-size:11px;color:#99adc4">Filter by language</div><div class="tagcloud"><button class="language-chip selected" data-lang="All">🌍 All languages</button><button class="language-chip" data-lang="French">🇫🇷 French</button><button class="language-chip" data-lang="Italian">🇮🇹 Italian</button></div><div id="class-chart"></div></article>
  </section>
  <section class="queue" id="queue"><div class="queue-head"><div><div class="queue-title">Your review queue <span style="color:var(--mint)">✦</span></div><div class="queue-sub">Only words due or overdue for review. Browse the complete collection in Vocabulary.</div></div><div class="controls"><input class="search" id="search" placeholder="⌕  Search due words" aria-label="Search due words" /></div></div><div class="queue-card"><div class="qrow header"><div id="queue-prompt-label">Word / phrase</div><div id="queue-answer-label">Translation</div><div>Status</div><div>Level</div><div>Action</div></div><div id="queue-rows"></div></div><div style="text-align:center;padding:14px 0 4px"><button id="queue-more" type="button" class="import-btn" hidden>Show more words ↓</button></div><div class="bottom-note"><span id="rows-count">Showing words</span><span>Synced with Notion · refreshes every minute</span></div></section>
  <div style="text-align:center;color:#4e617f;margin-top:38px;font-size:10px;letter-spacing:2px">LEXICON STUDIO · LEARN BEAUTIFULLY</div>
@@ -403,10 +403,10 @@ function typeKind(value){
  return 'word';
 }
 function languageEmoji(language){
- // Use pictorial emoji rather than country-flag letters on systems without flag glyphs.
+ // Show the actual Italian and French flag emojis throughout the interface.
  const name=String(language||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
- if(name.includes('ital'))return '🍝';
- if(name.includes('fren')||name.includes('franc'))return '🥐';
+ if(name.includes('ital'))return '🇮🇹';
+ if(name.includes('fren')||name.includes('franc'))return '🇫🇷';
  if(name.includes('engl')||name.includes('angl'))return '📚';
  if(name.includes('arab'))return '🌙';
  if(name.includes('germ')||name.includes('allem'))return '🥨';
