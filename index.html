@@ -156,6 +156,7 @@
 .grammar-page-actions button{padding:8px 11px;font-size:11px}
 .grammar-modal.grammar-compact-practice .practice-footer{margin:9px 0 5px}
 @media(max-width:600px){.grammar-modal.grammar-compact-practice{padding:17px 13px}.grammar-modal.grammar-compact-practice .table-practice-row{grid-template-columns:1fr;gap:5px}.grammar-modal.grammar-compact-practice .grammar-pair-prompt{font-size:18px}}
+.catalog-reverse-hint{font-size:9px;font-weight:690;letter-spacing:.15px;color:#bba8f9;margin-top:5px}
 </style>
 </head>
 <body>
@@ -239,7 +240,7 @@
   </div>
   <div class="catalog-content">
    <div class="catalog-head">
-    <div><h2 id="catalog-heading">All vocabulary</h2><p>Choose a word to reveal its translation in a flashcard or practise its conjugation, grammar or table. Browsing here never changes your review progress.</p></div>
+    <div><h2 id="catalog-heading">All vocabulary</h2><p id="catalog-study-hint">Choose a word to reveal its translation in a flashcard or practise its conjugation, grammar or table. Browsing here never changes your review progress.</p></div>
     <div class="catalog-controls">
      <button type="button" class="filter active" data-catalog-filter="all">All</button>
      <button type="button" class="filter" data-catalog-filter="words">Words</button>
@@ -250,7 +251,7 @@
     </div>
    </div>
    <div class="catalog-table-wrap">
-    <div class="catalog-row catalog-header"><div>Word / phrase</div><div>Category</div><div>Class</div><div>Study</div></div>
+    <div class="catalog-row catalog-header"><div id="catalog-word-heading">Word / phrase</div><div>Category</div><div>Class</div><div>Study</div></div>
     <div id="catalog-rows"></div>
    </div>
    <div class="catalog-foot"><span id="catalog-rows-count">Showing vocabulary</span><button id="catalog-more" type="button" class="import-btn" hidden>Show more ↓</button><span>View &amp; practise only · Notion synced</span></div>
@@ -543,10 +544,16 @@ function renderCatalog(){
  const all=filteredCatalog(),shown=all.slice(0,catalogLimit);
  $('catalog-total-count').textContent=list.length.toLocaleString();
  $('catalog-heading').textContent=({mastered:'Mastered vocabulary',words:'Words',verbs:'Verbs',grammar:'Grammar',all:'All vocabulary'})[catalogFilter]||'All vocabulary';
+ $('catalog-word-heading').textContent=reverseStudy?'French prompt / word':'Word / phrase';
+ $('catalog-study-hint').textContent=reverseStudy
+  ?'⇄ Reverse Mode is ON: study the French prompts and recall the Italian word. Open Practise to check your answer; your Notion review progress stays unchanged.'
+  :'Choose a word to reveal its translation in a flashcard or practise its conjugation, grammar or table. Browsing here never changes your review progress.';
  $('catalog-rows').innerHTML=shown.length?shown.map(w=>{
   const kind=typeKind(w.type);
   const category=kind==='verb'?'🔤 Verb':kind==='grammar'?'📖 Grammar':isTableEntry(w)?'🧩 Table':'💬 Word';
-  return '<div class="catalog-row"><div><div class="catalog-word">'+esc(w.word)+'</div></div>'
+  const reversed=reversedWord(w);
+  const prompt=reversed?w.meaning:w.word;
+  return '<div class="catalog-row"><div><div class="catalog-word">'+esc(prompt)+'</div>'+(reversed?'<div class="catalog-reverse-hint">⇄ Write the Italian word</div>':'')+'</div>'
    +'<div class="catalog-category">'+esc(category)+'</div><div class="catalog-meta">'+esc('Class '+w.klass)+'</div>'
    +'<div><button type="button" class="action" data-catalog-study="'+esc(w.id)+'">'+(kind==='grammar'?'Study →':'Practise →')+'</button></div></div>';
  }).join(''):'<div class="empty-state">No vocabulary matches this search or category.</div>';
