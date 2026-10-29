@@ -155,7 +155,6 @@
 .grammar-page-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#94adc4;font-size:10px;margin:11px 0}
 .grammar-page-actions button{padding:8px 11px;font-size:11px}
 .grammar-modal.grammar-compact-practice .practice-footer{margin:9px 0 5px}
-#grammar-next-page[hidden]{display:none!important}
 @media(max-width:600px){.grammar-modal.grammar-compact-practice{padding:17px 13px}.grammar-modal.grammar-compact-practice .table-practice-row{grid-template-columns:1fr;gap:5px}.grammar-modal.grammar-compact-practice .grammar-pair-prompt{font-size:18px}}
 </style>
 </head>
@@ -367,7 +366,7 @@
   </div>
   <form id="grammar-table-form">
    <div id="grammar-questions"></div>
-   <div class="grammar-page-actions"><span id="grammar-page-status"></span><button type="button" id="grammar-next-page" class="quiz-secondary" hidden>Next questions →</button></div>
+   <div class="grammar-page-actions"><span id="grammar-page-status"></span></div>
    <div class="practice-footer">
     <button type="submit" id="grammar-check" class="quiz-check">✓ Check answers</button>
     <button type="button" id="grammar-retry" class="quiz-secondary">Try again</button>
@@ -1484,7 +1483,6 @@ function setGrammarMode(mode){
 function grammarTables(){
  return (grammarLesson?.tables||[]).map((table,index)=>({table,index})).filter(x=>x.table.rows.length>1&&Math.max(...x.table.rows.map(r=>r.length),0)>1);
 }
-let grammarPracticePage=0;
 function grammarPairColumns(table){
  if(!table?.header||!table.rows?.length)return null;
  const headers=table.rows[0].map(cell=>withoutAccents(String(cell||'').toLowerCase()).replace(/[^a-z]/g,''));
@@ -1499,7 +1497,7 @@ function grammarActiveRows(){
  const pair=grammarPairColumns(table);
  const source=pair?(target===pair.italian?pair.french:pair.italian):null;
  return table.rows.slice(table.header?1:0).map((cells,index)=>({cells,index}))
-  .filter(({cells})=>String(cells[target]||'').trim()&&(source===null||String(cells[source]||'').trim())).slice(0,100);
+  .filter(({cells})=>String(cells[target]||'').trim()&&(source===null||String(cells[source]||'').trim()));
 }
 function initGrammarTables(){
  const picker=$('grammar-table-select');picker.replaceChildren();
@@ -1510,7 +1508,6 @@ function initGrammarTables(){
  renderGrammarColumnOptions();
 }
 function renderGrammarColumnOptions(){
- grammarPracticePage=0;
  const table=grammarLesson?.tables[Number($('grammar-table-select').value)];
  const picker=$('grammar-column-select');picker.replaceChildren();
  if(!table){renderGrammarQuestions();return}
@@ -1535,7 +1532,7 @@ function renderGrammarQuestions(){
  $('grammar-score').hidden=true;$('grammar-score').textContent='';
  resetGrammarReveal();
  $('grammar-check').disabled=!table;$('grammar-retry').disabled=!table;
- $('grammar-page-status').textContent='';$('grammar-next-page').hidden=true;
+ $('grammar-page-status').textContent='';
  if(!table){area.innerHTML='<p class="conjugation-hint">No practiceable table was found in this lesson.</p>';return}
  const target=Number($('grammar-column-select').value);
  const pair=grammarPairColumns(table);
@@ -1545,25 +1542,20 @@ function renderGrammarQuestions(){
  const source=paired?(target===pair.italian?pair.french:pair.italian):null;
  const header=table.header?table.rows[0]:[];
  const questions=grammarActiveRows();
- const pageSize=4;
- const totalPages=Math.max(1,Math.ceil(questions.length/pageSize));
- grammarPracticePage=Math.min(grammarPracticePage,totalPages-1);
- const visible=questions.slice(grammarPracticePage*pageSize,(grammarPracticePage+1)*pageSize);
  $('grammar-modal').classList.toggle('grammar-compact-practice',!!isGrammar);
  $('grammar-table-instructions').textContent=paired
   ?(target===pair.italian?'Read the French preposition and write its Italian equivalent.':'Read the Italian preposition and write its French equivalent.')
   :'Write the missing answer for each prompt.';
  $('grammar-direction-wrap').querySelector('label').textContent=paired?'Translate from':'Which column to practise?';
- $('grammar-page-status').textContent=questions.length?'Questions '+(grammarPracticePage*pageSize+1)+'–'+Math.min((grammarPracticePage+1)*pageSize,questions.length)+' of '+questions.length:'';
- $('grammar-next-page').hidden=grammarPracticePage>=totalPages-1;
- if(!visible.length){area.innerHTML='<p class="conjugation-hint">No answers were found for this direction.</p>';return}
- area.innerHTML=visible.map(({cells,index})=>{
+ $('grammar-page-status').textContent=questions.length?questions.length+' '+(questions.length===1?'question':'questions')+' · all on this page':'';
+ if(!questions.length){area.innerHTML='<p class="conjugation-hint">No answers were found for this direction.</p>';return}
+ area.innerHTML=questions.map(({cells,index},questionNumber)=>{
   const shown=paired
    ?'<p class="grammar-prompt grammar-pair-prompt">'+esc(String(cells[source]||''))+'</p>'
    :cells.map((value,i)=>({value,i})).filter(c=>c.i!==target&&String(c.value||'').trim()).map(c=>'<p class="grammar-prompt"><strong>'+esc(String(header[c.i]||'Column '+(c.i+1)))+':</strong> '+esc(c.value)+'</p>').join('');
   const destination=paired?(target===pair.italian?'Italian':'French'):String(header[target]||'Your answer');
   const answer='<label for="grammar-answer-'+index+'">Write in '+esc(destination)+'</label><input id="grammar-answer-'+index+'" class="practice-answer grammar-answer" type="text" spellcheck="false" autocomplete="off" data-row="'+index+'" placeholder="Your '+esc(destination)+' answer…" maxlength="2000"/><div class="grammar-feedback" id="grammar-feedback-'+index+'" aria-live="polite"></div>';
-  return '<div class="grammar-question" data-row="'+index+'"><div class="grammar-question-title">EXERCISE '+(grammarPracticePage*pageSize+visible.indexOf(questions.find(q=>q.index===index))+1)+'</div><div class="table-practice-row"><div class="table-practice-clues">'+shown+'</div><div class="table-practice-response">'+answer+'</div></div></div>';
+  return '<div class="grammar-question" data-row="'+index+'"><div class="grammar-question-title">EXERCISE '+(questionNumber+1)+'</div><div class="table-practice-row"><div class="table-practice-clues">'+shown+'</div><div class="table-practice-response">'+answer+'</div></div></div>';
  }).join('');
 }
 function grammarComparable(value){
@@ -2122,8 +2114,7 @@ $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('grammar-refresh').onclick=()=>{if(grammarWordId)showGrammar(grammarWordId,true,grammarMode)};
  document.querySelectorAll('[data-grammar-tab]').forEach(button=>button.onclick=()=>setGrammarMode(button.dataset.grammarTab));
  $('grammar-table-select').onchange=renderGrammarColumnOptions;
- $('grammar-next-page').onclick=()=>{grammarPracticePage++;renderGrammarQuestions();};
- $('grammar-column-select').onchange=()=>{grammarPracticePage=0;renderGrammarQuestions();};
+ $('grammar-column-select').onchange=renderGrammarQuestions;
  $('grammar-table-form').addEventListener('submit',checkGrammarTable);
  $('grammar-retry').onclick=()=>{renderGrammarQuestions();$('grammar-questions').querySelector('.grammar-answer')?.focus()};
  $('grammar-reveal').onclick=revealGrammarTableAnswers;
