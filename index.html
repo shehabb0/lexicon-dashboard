@@ -92,6 +92,19 @@
 .lang-flag{width:20px;height:14px;display:inline-block;vertical-align:-2px;flex-shrink:0;border-radius:2px;box-shadow:0 0 0 1px #94a5bc66;overflow:hidden}
 .language-chip .lang-flag{margin-right:4px}
 .lang-fallback-icon{display:inline-block;vertical-align:baseline}
+
+/* Top-level study-language switch: Italian active, French awaits its own workspace. */
+.topbar{flex-wrap:wrap;row-gap:11px}
+.topbar-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
+.topright{flex-wrap:wrap;justify-content:flex-end}
+.language-workspace-switch{display:inline-flex;align-items:center;gap:3px;padding:4px;background:#121e30;border:1px solid #344763;border-radius:13px;flex-shrink:0}
+.workspace-lang-choice{display:inline-flex;align-items:center;gap:7px;background:transparent;border:1px solid transparent;border-radius:9px;color:#8fa4bc;font-size:11px;font-weight:770;white-space:nowrap;padding:7px 10px;line-height:1.3;transition:background .15s,border-color .15s}
+.workspace-lang-choice.active{background:#245249;color:#c1ffe8;border-color:#559b87}
+.workspace-lang-choice:not(.active):hover{background:#1d2f47;color:#e0efff}
+.workspace-lang-choice.soon{color:#8a9bb4}
+.workspace-lang-choice .lang-flag{width:19px;height:13px}
+.language-soon-label{font-size:8px;letter-spacing:.3px;background:#28344c;border:1px solid #44516d;color:#b8c4da;padding:2px 4px;border-radius:5px;font-weight:780}
+@media(max-width:600px){.topbar-left{gap:9px}.workspace-lang-choice{padding:7px}.language-soon-label{font-size:7px}}
 </style>
 </head>
 <body>
@@ -122,7 +135,7 @@
   <div class="sidebar-foot"><div class="mini-card"><span style="color:var(--mint);font-size:10px;font-weight:850;letter-spacing:1px">YOUR JOURNEY ✦</span><strong style="display:block;margin-top:7px">One word at a time.</strong><p>Consistency turns new words into a second language.</p><div class="track"><div class="fill" id="side-progress"></div></div></div><div class="sidebar-bottom">✦ Designed for curious minds</div></div>
 </aside>
 <main class="main" id="overview">
- <header class="topbar"><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn reverse-switch" type="button" id="reverse-mode" aria-pressed="false" title="Show the translation first and type the original word">⇄ Reverse: OFF</button><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <button class="import-btn" id="import">↻ Refresh Notion</button><div class="avatar" title="Lexicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lexicon blue and coral L" width="42" height="42">
+ <header class="topbar"><div class="topbar-left"><div class="language-workspace-switch" role="group" aria-label="Choose study language"><button type="button" class="workspace-lang-choice active" data-workspace-language="Italian" aria-pressed="true" title="Italian workspace"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="Italian flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#009246"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ce2b37"/></svg><span>Italian</span></button><button type="button" class="workspace-lang-choice soon" data-workspace-language="French" aria-pressed="false" title="French workspace coming soon"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="French flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#0055a4"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ef4135"/></svg><span>French</span><span class="language-soon-label">Soon</span></button></div><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn reverse-switch" type="button" id="reverse-mode" aria-pressed="false" title="Show the translation first and type the original word">⇄ Reverse: OFF</button><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <button class="import-btn" id="import">↻ Refresh Notion</button><div class="avatar" title="Lexicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lexicon blue and coral L" width="42" height="42">
 <defs><linearGradient id="lx-top-b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#2258C7"/></linearGradient><linearGradient id="lx-top-c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFA88E"/><stop offset="1" stop-color="#FF7A59"/></linearGradient></defs>
 <rect width="64" height="64" rx="17" fill="#F8FAFC"/>
 <path d="M15 15c0-6 4.4-10.4 10-10.4S35 9 35 15v23h11c5.8 0 10 4.6 10 10.3S51.8 58.5 46 58.5H25c-5.8 0-10-4.4-10-10.2V15Z" fill="url(#lx-top-b)"/>
@@ -142,7 +155,7 @@
  </section>
  <section class="lowergrid">
   <article class="panel"><div class="panel-head"><div><h2>Study consistency</h2><div class="subtitle" id="heat-sub">Your recent learning days</div></div><div class="chip">12 weeks</div></div><div class="heatmap-grid" id="heatmap"></div><div class="heatcaption"><span>Less</span><span class="sq" style="background:#1d2a3c"></span><span class="sq" style="background:#285a54"></span><span class="sq" style="background:#397b69"></span><span class="sq" style="background:#5bc29b"></span><span class="sq" style="background:#9af2c7"></span><span>More</span><span class="heat-caption-tail" id="streakline"></span></div></article>
-  <article class="panel"><div class="panel-head"><div><h2>Learning levels</h2><div class="subtitle">Where your vocabulary stands</div></div><div class="chip">Classes 1–10</div></div><div style="margin:9px 0 2px;font-size:11px;color:#99adc4">Filter by language</div><div class="tagcloud"><button class="language-chip selected" data-lang="All">🌍 All languages</button><button class="language-chip" data-lang="French"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="French flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#0055a4"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ef4135"/></svg> French</button><button class="language-chip" data-lang="Italian"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="Italian flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#009246"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ce2b37"/></svg> Italian</button></div><div id="class-chart"></div></article>
+  <article class="panel"><div class="panel-head"><div><h2>Learning levels</h2><div class="subtitle">Where your vocabulary stands</div></div><div class="chip">Classes 1–10</div></div><div id="class-chart"></div></article>
  </section>
  <section class="queue" id="queue"><div class="queue-head"><div><div class="queue-title">Your review queue <span style="color:var(--mint)">✦</span></div><div class="queue-sub">Only words due or overdue for review. Browse the complete collection in Vocabulary.</div></div><div class="controls"><input class="search" id="search" placeholder="⌕  Search due words" aria-label="Search due words" /></div></div><div class="queue-card"><div class="qrow header"><div id="queue-prompt-label">Word / phrase</div><div id="queue-answer-label">Translation</div><div>Status</div><div>Level</div><div>Action</div></div><div id="queue-rows"></div></div><div style="text-align:center;padding:14px 0 4px"><button id="queue-more" type="button" class="import-btn" hidden>Show more words ↓</button></div><div class="bottom-note"><span id="rows-count">Showing words</span><span>Synced with Notion · refreshes every minute</span></div></section>
  <div style="text-align:center;color:#4e617f;margin-top:38px;font-size:10px;letter-spacing:2px">LEXICON STUDIO · LEARN BEAUTIFULLY</div>
@@ -362,7 +375,9 @@ const iso=d=>{if(!d||Number.isNaN(d.getTime()))return '';const y=d.getFullYear()
 const dayDiff=d=>Math.round((startOfDay(d).getTime()-startOfDay(new Date()).getTime())/dayMs);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let list=[],lang='All',search='',selectedId=null,imported=true,queueLimit=24;
+let list=[],search='',selectedId=null,imported=true,queueLimit=24;
+const LANGUAGE_WORKSPACES={Italian:{ready:true},French:{ready:false}};
+let activeLanguageWorkspace='Italian';
 let catalogFilter='all',catalogSearch='',catalogLimit=60,studyOnly=false;
 let reviewSession=null,reviewActionBusy=false;
 let reviewHistorySaveQueue=Promise.resolve();
@@ -382,6 +397,21 @@ function updateReverseSwitch(){
  button.title=reverseStudy?'Show the original words and answer from translations · Click to turn off':'Show translations first and type original words · Click to turn on';
  $('queue-prompt-label').textContent=reverseStudy?'Translation / meaning':'Word / phrase';
  $('queue-answer-label').textContent=reverseStudy?'Original word':'Translation';
+}
+function chooseLanguageWorkspace(language){
+ const workspace=LANGUAGE_WORKSPACES[language];
+ if(!workspace)return;
+ if(!workspace.ready){
+  toast('French workspace is coming soon. Your Italian vocabulary stays unchanged.');
+  return;
+ }
+ activeLanguageWorkspace=language;
+ document.querySelectorAll('[data-workspace-language]').forEach(button=>{
+  const selected=button.dataset.workspaceLanguage===language;
+  button.classList.toggle('active',selected);
+  button.setAttribute('aria-pressed',String(selected));
+ });
+ // Each language will have a separate vocabulary source when French is implemented.
 }
 function toggleReverseMode(){
  reverseStudy=!reverseStudy;
@@ -423,7 +453,7 @@ function isTableEntry(word){
 }
 function filtered(){
  // Review Queue: due and overdue items only, including when searching.
- const words=dueWords().filter(w=>lang==='All'||w.lang===lang);
+ const words=dueWords();
  const matches=search?words.filter(w=>(w.word+' '+w.meaning+' '+w.type+' '+w.lang).toLowerCase().includes(search)):words;
  return matches.sort((a,b)=>a.next-b.next||a.word.localeCompare(b.word));
 }
@@ -444,7 +474,7 @@ function renderCatalog(){
  $('catalog-rows').innerHTML=shown.length?shown.map(w=>{
   const kind=typeKind(w.type);
   const category=kind==='verb'?'🔤 Verb':kind==='grammar'?'📖 Grammar':isTableEntry(w)?'🧩 Table':'💬 Word';
-  return '<div class="catalog-row"><div><div class="catalog-word">'+esc(w.word)+'</div><div class="catalog-meta">'+languageBadgeMarkup(w.lang)+' '+esc(w.lang)+'</div></div>'
+  return '<div class="catalog-row"><div><div class="catalog-word">'+esc(w.word)+'</div></div>'
    +'<div class="catalog-category">'+esc(category)+'</div><div class="catalog-meta">'+esc('Class '+w.klass)+'</div>'
    +'<div><button type="button" class="action" data-catalog-study="'+esc(w.id)+'">'+(kind==='grammar'?'Study →':'Practise →')+'</button></div></div>';
  }).join(''):'<div class="empty-state">No vocabulary matches this search or category.</div>';
@@ -455,8 +485,8 @@ function renderCatalog(){
 }
 function render(){const total=list.length,master=list.filter(w=>w.mastered||w.difficulty==='Learned').length,due=dueWords().length,late=activeWords().filter(w=>w.next&&dayDiff(w.next)<0).length,pct=total?Math.round(master/total*100):0;
  $('total').textContent=total;$('mastered').textContent=master;$('due').textContent=due;$('overdue').textContent=late;$('side-due').textContent=due;$('side-vocab-count').textContent=total;$('mastered-note').textContent=pct+'% of your collection';$('donut').style.setProperty('--degree',pct+'%');$('donut-value').textContent=pct+'%';$('progress-numbers').textContent=master+' / '+total;$('progress-bar').style.width=pct+'%';$('side-progress').style.width=pct+'%';$('progress-label').textContent=pct>75?'Beautiful progress ✦':pct>30?'Making steady progress ✦':'Every word counts ✦';
- $('class-chart').innerHTML=Array.from({length:10},(_,i)=>{const n=list.filter(w=>w.klass===i+1&&(lang==='All'||w.lang===lang)&&!w.mastered).length;const max=Math.max(...Array.from({length:10},(_,z)=>list.filter(w=>w.klass===z+1&&(lang==='All'||w.lang===lang)&&!w.mastered).length),1);return `<div class="class-row"><span class="name">Class ${i+1}</span><div class="track"><div class="fill" style="width:${(n/max)*100}%"></div></div><span class="value">${n}</span></div>`}).join('');
- const shown=filtered();$('queue-rows').innerHTML=shown.length?shown.slice(0,queueLimit).map(w=>{const [s,label]=getStatus(w);const rev=reversedWord(w),promptText=rev?w.meaning:w.word,answerText=rev?w.word:w.meaning;return `<div class="qrow"><div><div class="word-name">${esc(promptText)}</div><div class="word-meta">${languageBadgeMarkup(w.lang)} ${esc(w.lang)} · ${esc(w.type||'Word')}${rev?' · REVERSE':''}</div></div><div class="meaning ${peekedTranslations.has(w.id)?'':'masked'}"><span>${peekedTranslations.has(w.id)?esc(answerText||'No translation'):'••••••'}</span><button type="button" class="peek" data-peek="${esc(w.id)}" aria-label="${peekedTranslations.has(w.id)?'Hide':'Show'} ${rev?'original word':'translation'} for ${esc(promptText)}">${peekedTranslations.has(w.id)?'Hide':'Show'}</button></div><div><span class="status ${s}">${esc(label)}</span></div><div style="font-size:11px;color:#b8c8dd">Class ${w.klass}</div><div><button class="action" data-open="${w.id}">${typeKind(w.type)==='grammar'?'Study →':w.mastered?'View':'Review →'}</button></div></div>`}).join(''):`<div class="empty-state">✦ No words in this view. You're all caught up!</div>`;$('rows-count').textContent=`Showing ${Math.min(shown.length,queueLimit)} of ${shown.length} matching words`;$('queue-more').hidden=shown.length<=queueLimit;
+ $('class-chart').innerHTML=Array.from({length:10},(_,i)=>{const n=list.filter(w=>w.klass===i+1&&!w.mastered).length;const max=Math.max(...Array.from({length:10},(_,z)=>list.filter(w=>w.klass===z+1&&!w.mastered).length),1);return `<div class="class-row"><span class="name">Class ${i+1}</span><div class="track"><div class="fill" style="width:${(n/max)*100}%"></div></div><span class="value">${n}</span></div>`}).join('');
+ const shown=filtered();$('queue-rows').innerHTML=shown.length?shown.slice(0,queueLimit).map(w=>{const [s,label]=getStatus(w);const rev=reversedWord(w),promptText=rev?w.meaning:w.word,answerText=rev?w.word:w.meaning;return `<div class="qrow"><div><div class="word-name">${esc(promptText)}</div><div class="word-meta">${esc(w.type||'Word')}${rev?' · REVERSE':''}</div></div><div class="meaning ${peekedTranslations.has(w.id)?'':'masked'}"><span>${peekedTranslations.has(w.id)?esc(answerText||'No translation'):'••••••'}</span><button type="button" class="peek" data-peek="${esc(w.id)}" aria-label="${peekedTranslations.has(w.id)?'Hide':'Show'} ${rev?'original word':'translation'} for ${esc(promptText)}">${peekedTranslations.has(w.id)?'Hide':'Show'}</button></div><div><span class="status ${s}">${esc(label)}</span></div><div style="font-size:11px;color:#b8c8dd">Class ${w.klass}</div><div><button class="action" data-open="${w.id}">${typeKind(w.type)==='grammar'?'Study →':w.mastered?'View':'Review →'}</button></div></div>`}).join(''):`<div class="empty-state">✦ No words in this view. You're all caught up!</div>`;$('rows-count').textContent=`Showing ${Math.min(shown.length,queueLimit)} of ${shown.length} matching words`;$('queue-more').hidden=shown.length<=queueLimit;
  document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>openWord(b.dataset.open)));
   document.querySelectorAll('[data-peek]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.peek;if(peekedTranslations.has(id))peekedTranslations.delete(id);else peekedTranslations.add(id);render()}));
  renderCatalog();renderActivity();renderHeat();
@@ -719,7 +749,7 @@ function openWord(id,fromReviewSession=false,viewOnly=false){
  const isGrammar=typeKind(w.type)==='grammar';
  const progress=fromReviewSession&&reviewSession?` · REVIEW ${reviewSession.completed+1} / ${reviewSession.total}`:'';
  const reversed=reversedWord(w);
- $('flash-label').innerHTML=languageBadgeMarkup(w.lang)+' '+esc(w.lang.toUpperCase())+' · CLASS '+w.klass+(reversed?' · REVERSE':'')+esc(progress);
+ $('flash-label').innerHTML=languageBadgeMarkup('Italian')+' ITALIAN · CLASS '+w.klass+(reversed?' · REVERSE':'')+esc(progress);
  $('flash-answer').textContent=reversed?w.word:w.meaning;
  $('flash-word').textContent=reversed?w.meaning:w.word;
  $('flash-answer').classList.add('hidden');
@@ -786,7 +816,7 @@ function mapPage(page){
  const type=propertyText(propByCandidates(p,['Type']));
  const tableCategory=propertyText(propByCandidates(p,['Category','Categories','Categoria','Study Format','Format']));
  const klass=Number(propertyText(p.Class))||1;
- return {id:page.id,word,meaning,type,tableCategory,lang:propertyText(propByCandidates(p,['Language','Lang','Languages','Lingua','Langue','Idioma'])).trim()||'Language not set',
+ return {id:page.id,word,meaning,type,tableCategory,lang:propertyText(propByCandidates(p,['Language','Lang','Languages','Lingua','Langue','Idioma'])).trim()||'Italian',
   klass:Math.max(1,Math.min(10,klass)),next:propertyText(p['Next Review'])||null,
   difficulty,mastered:difficulty==='Learned',approvedReviews:Number(p['Approved Reviews']?.number||0),
   example:propertyText(propByCandidates(p,['Example','Example Sentence','Sentence'])),url:page.url||''};
@@ -2001,11 +2031,12 @@ $('close').onclick=closeReviewFlashcard;
  $('review-complete-overlay').onclick=e=>{if(e.target===$('review-complete-overlay'))$('review-complete-overlay').classList.remove('open')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('grammar-overlay').classList.contains('open'))closeGrammar();else if($('conjugation-overlay').classList.contains('open'))closeConjugation();else if($('review-complete-overlay').classList.contains('open'))$('review-complete-overlay').classList.remove('open');else if($('overlay').classList.contains('open'))closeReviewFlashcard();else $('add-overlay').classList.remove('open')}});
 $('forgot').onclick=()=>act('forgot');$('remembered').onclick=()=>act('remember');$('master-word').onclick=()=>act('master');
 $('queue-more').onclick=()=>{queueLimit+=30;render()};
+ document.querySelectorAll('[data-workspace-language]').forEach(button=>button.onclick=()=>chooseLanguageWorkspace(button.dataset.workspaceLanguage));
  $('catalog-more').onclick=()=>{catalogLimit+=60;renderCatalog()};
  $('catalog-search').oninput=e=>{catalogSearch=e.target.value.toLowerCase().trim();catalogLimit=60;renderCatalog()};
  document.querySelectorAll('[data-catalog-filter]').forEach(b=>b.onclick=()=>{catalogFilter=b.dataset.catalogFilter;catalogLimit=60;renderCatalog()});
  $('search').oninput=e=>{search=e.target.value.toLowerCase().trim();queueLimit=24;render()};
- document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{lang=b.dataset.lang;document.querySelectorAll('[data-lang]').forEach(x=>x.classList.toggle('selected',x===b));render()});
+ 
  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{
  const n=b.dataset.nav;
  if(n==='monthly'){showWorkspace('monthly');return}
