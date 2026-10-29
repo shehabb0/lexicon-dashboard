@@ -139,7 +139,7 @@
  </section>
  <section class="lowergrid">
   <article class="panel"><div class="panel-head"><div><h2>Study consistency</h2><div class="subtitle" id="heat-sub">Your recent learning days</div></div><div class="chip">12 weeks</div></div><div class="heatmap-grid" id="heatmap"></div><div class="heatcaption"><span>Less</span><span class="sq" style="background:#1d2a3c"></span><span class="sq" style="background:#285a54"></span><span class="sq" style="background:#397b69"></span><span class="sq" style="background:#5bc29b"></span><span class="sq" style="background:#9af2c7"></span><span>More</span><span class="heat-caption-tail" id="streakline"></span></div></article>
-  <article class="panel"><div class="panel-head"><div><h2>Learning levels</h2><div class="subtitle">Where your vocabulary stands</div></div><div class="chip">Classes 1–10</div></div><div style="margin:9px 0 2px;font-size:11px;color:#99adc4">Filter by language</div><div class="tagcloud"><button class="language-chip selected" data-lang="All">✦ All languages</button><button class="language-chip" data-lang="French">🇫🇷 French</button><button class="language-chip" data-lang="Italian">🇮🇹 Italian</button></div><div id="class-chart"></div></article>
+  <article class="panel"><div class="panel-head"><div><h2>Learning levels</h2><div class="subtitle">Where your vocabulary stands</div></div><div class="chip">Classes 1–10</div></div><div style="margin:9px 0 2px;font-size:11px;color:#99adc4">Filter by language</div><div class="tagcloud"><button class="language-chip selected" data-lang="All">🌍 All languages</button><button class="language-chip" data-lang="French">🥐 French</button><button class="language-chip" data-lang="Italian">🍝 Italian</button></div><div id="class-chart"></div></article>
  </section>
  <section class="queue" id="queue"><div class="queue-head"><div><div class="queue-title">Your review queue <span style="color:var(--mint)">✦</span></div><div class="queue-sub">Only words due or overdue for review. Browse the complete collection in Vocabulary.</div></div><div class="controls"><input class="search" id="search" placeholder="⌕  Search due words" aria-label="Search due words" /></div></div><div class="queue-card"><div class="qrow header"><div id="queue-prompt-label">Word / phrase</div><div id="queue-answer-label">Translation</div><div>Status</div><div>Level</div><div>Action</div></div><div id="queue-rows"></div></div><div style="text-align:center;padding:14px 0 4px"><button id="queue-more" type="button" class="import-btn" hidden>Show more words ↓</button></div><div class="bottom-note"><span id="rows-count">Showing words</span><span>Synced with Notion · refreshes every minute</span></div></section>
  <div style="text-align:center;color:#4e617f;margin-top:38px;font-size:10px;letter-spacing:2px">LEXICON STUDIO · LEARN BEAUTIFULLY</div>
@@ -402,6 +402,17 @@ function typeKind(value){
  if(t.includes('gramm'))return 'grammar';
  return 'word';
 }
+function languageEmoji(language){
+ // Use pictorial emoji rather than country-flag letters on systems without flag glyphs.
+ const name=String(language||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+ if(name.includes('ital'))return '🍝';
+ if(name.includes('fren')||name.includes('franc'))return '🥐';
+ if(name.includes('engl')||name.includes('angl'))return '📚';
+ if(name.includes('arab'))return '🌙';
+ if(name.includes('germ')||name.includes('allem'))return '🥨';
+ if(name.includes('span')||name.includes('espag'))return '💃';
+ return '🌍';
+}
 function isTableEntry(word){
  // "Table" is a vocabulary Type alongside "Parola"; tolerate multi-select values such as "Parola, Table".
  const labels=[word?.type,word?.tableCategory].filter(Boolean).join(',').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -429,8 +440,8 @@ function renderCatalog(){
  $('catalog-heading').textContent=({mastered:'Mastered vocabulary',words:'Words',verbs:'Verbs',grammar:'Grammar',all:'All vocabulary'})[catalogFilter]||'All vocabulary';
  $('catalog-rows').innerHTML=shown.length?shown.map(w=>{
   const kind=typeKind(w.type);
-  const category=kind==='verb'?'Verb':kind==='grammar'?'Grammar':isTableEntry(w)?'Table':'Word';
-  return '<div class="catalog-row"><div><div class="catalog-word">'+esc(w.word)+'</div><div class="catalog-meta">'+esc(w.lang)+'</div></div>'
+  const category=kind==='verb'?'🔤 Verb':kind==='grammar'?'📖 Grammar':isTableEntry(w)?'🧩 Table':'💬 Word';
+  return '<div class="catalog-row"><div><div class="catalog-word">'+esc(w.word)+'</div><div class="catalog-meta">'+esc(languageEmoji(w.lang))+' '+esc(w.lang)+'</div></div>'
    +'<div class="catalog-category">'+esc(category)+'</div><div class="catalog-meta">'+esc('Class '+w.klass)+'</div>'
    +'<div><button type="button" class="action" data-catalog-study="'+esc(w.id)+'">'+(kind==='grammar'?'Study →':'Practise →')+'</button></div></div>';
  }).join(''):'<div class="empty-state">No vocabulary matches this search or category.</div>';
@@ -442,7 +453,7 @@ function renderCatalog(){
 function render(){const total=list.length,master=list.filter(w=>w.mastered||w.difficulty==='Learned').length,due=dueWords().length,late=activeWords().filter(w=>w.next&&dayDiff(w.next)<0).length,pct=total?Math.round(master/total*100):0;
  $('total').textContent=total;$('mastered').textContent=master;$('due').textContent=due;$('overdue').textContent=late;$('side-due').textContent=due;$('side-vocab-count').textContent=total;$('mastered-note').textContent=pct+'% of your collection';$('donut').style.setProperty('--degree',pct+'%');$('donut-value').textContent=pct+'%';$('progress-numbers').textContent=master+' / '+total;$('progress-bar').style.width=pct+'%';$('side-progress').style.width=pct+'%';$('progress-label').textContent=pct>75?'Beautiful progress ✦':pct>30?'Making steady progress ✦':'Every word counts ✦';
  $('class-chart').innerHTML=Array.from({length:10},(_,i)=>{const n=list.filter(w=>w.klass===i+1&&(lang==='All'||w.lang===lang)&&!w.mastered).length;const max=Math.max(...Array.from({length:10},(_,z)=>list.filter(w=>w.klass===z+1&&(lang==='All'||w.lang===lang)&&!w.mastered).length),1);return `<div class="class-row"><span class="name">Class ${i+1}</span><div class="track"><div class="fill" style="width:${(n/max)*100}%"></div></div><span class="value">${n}</span></div>`}).join('');
- const shown=filtered();$('queue-rows').innerHTML=shown.length?shown.slice(0,queueLimit).map(w=>{const [s,label]=getStatus(w);const rev=reversedWord(w),promptText=rev?w.meaning:w.word,answerText=rev?w.word:w.meaning;return `<div class="qrow"><div><div class="word-name">${esc(promptText)}</div><div class="word-meta"><span class="lang-dot" style="background:${w.lang==='French'?'#a89bff':'#83eccb'}"></span>${esc(w.lang)} · ${esc(w.type||'Word')}${rev?' · REVERSE':''}</div></div><div class="meaning ${peekedTranslations.has(w.id)?'':'masked'}"><span>${peekedTranslations.has(w.id)?esc(answerText||'No translation'):'••••••'}</span><button type="button" class="peek" data-peek="${esc(w.id)}" aria-label="${peekedTranslations.has(w.id)?'Hide':'Show'} ${rev?'original word':'translation'} for ${esc(promptText)}">${peekedTranslations.has(w.id)?'Hide':'Show'}</button></div><div><span class="status ${s}">${esc(label)}</span></div><div style="font-size:11px;color:#b8c8dd">Class ${w.klass}</div><div><button class="action" data-open="${w.id}">${typeKind(w.type)==='grammar'?'Study →':w.mastered?'View':'Review →'}</button></div></div>`}).join(''):`<div class="empty-state">✦ No words in this view. You're all caught up!</div>`;$('rows-count').textContent=`Showing ${Math.min(shown.length,queueLimit)} of ${shown.length} matching words`;$('queue-more').hidden=shown.length<=queueLimit;
+ const shown=filtered();$('queue-rows').innerHTML=shown.length?shown.slice(0,queueLimit).map(w=>{const [s,label]=getStatus(w);const rev=reversedWord(w),promptText=rev?w.meaning:w.word,answerText=rev?w.word:w.meaning;return `<div class="qrow"><div><div class="word-name">${esc(promptText)}</div><div class="word-meta">${esc(languageEmoji(w.lang))} ${esc(w.lang)} · ${esc(w.type||'Word')}${rev?' · REVERSE':''}</div></div><div class="meaning ${peekedTranslations.has(w.id)?'':'masked'}"><span>${peekedTranslations.has(w.id)?esc(answerText||'No translation'):'••••••'}</span><button type="button" class="peek" data-peek="${esc(w.id)}" aria-label="${peekedTranslations.has(w.id)?'Hide':'Show'} ${rev?'original word':'translation'} for ${esc(promptText)}">${peekedTranslations.has(w.id)?'Hide':'Show'}</button></div><div><span class="status ${s}">${esc(label)}</span></div><div style="font-size:11px;color:#b8c8dd">Class ${w.klass}</div><div><button class="action" data-open="${w.id}">${typeKind(w.type)==='grammar'?'Study →':w.mastered?'View':'Review →'}</button></div></div>`}).join(''):`<div class="empty-state">✦ No words in this view. You're all caught up!</div>`;$('rows-count').textContent=`Showing ${Math.min(shown.length,queueLimit)} of ${shown.length} matching words`;$('queue-more').hidden=shown.length<=queueLimit;
  document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>openWord(b.dataset.open)));
   document.querySelectorAll('[data-peek]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.peek;if(peekedTranslations.has(id))peekedTranslations.delete(id);else peekedTranslations.add(id);render()}));
  renderCatalog();renderActivity();renderHeat();
@@ -705,7 +716,7 @@ function openWord(id,fromReviewSession=false,viewOnly=false){
  const isGrammar=typeKind(w.type)==='grammar';
  const progress=fromReviewSession&&reviewSession?` · REVIEW ${reviewSession.completed+1} / ${reviewSession.total}`:'';
  const reversed=reversedWord(w);
- $('flash-label').textContent=w.lang.toUpperCase()+' · CLASS '+w.klass+(reversed?' · REVERSE':'')+progress;
+ $('flash-label').textContent=languageEmoji(w.lang)+' '+w.lang.toUpperCase()+' · CLASS '+w.klass+(reversed?' · REVERSE':'')+progress;
  $('flash-answer').textContent=reversed?w.word:w.meaning;
  $('flash-word').textContent=reversed?w.meaning:w.word;
  $('flash-answer').classList.add('hidden');
