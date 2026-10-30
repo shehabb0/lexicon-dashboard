@@ -463,6 +463,7 @@ let activeLanguageWorkspace='Italian';
 let catalogFilter='all',catalogSearch='',catalogLimit=60,studyOnly=false;
 let reviewSession=null,reviewActionBusy=false;
 let reviewHistorySaveQueue=Promise.resolve();
+let historySyncPromise=Promise.resolve();
 const vocabularyPracticeLogKeys=new Set(); // Dedupe identical checked attempts within one study opening.
 let conjugationWordId=null,conjugationRequest=0,conjugationMode='view',practiceExercises=[];
 const conjugationCache=new Map();
@@ -1140,12 +1141,15 @@ async function readReviewHistory(){
  }
  historyEvents=entries;renderActivity();renderHeat();
 }
-async function syncHistory(){
- if(historyBusy||!notionToken||!sourceId)return;
+function syncHistory(){
+ if(historyBusy||!notionToken||!sourceId)return historySyncPromise;
  historyBusy=true;
- try{await locateReviewHistory();await readReviewHistory();historyError=''}
- catch(e){console.warn('Unable to read review history',e);historyError='History could not be loaded: '+e.message}
- finally{historyBusy=false;renderActivity();renderHeat()}
+ historySyncPromise=(async()=>{
+  try{await locateReviewHistory();await readReviewHistory();historyError=''}
+  catch(e){console.warn('Unable to read review history',e);historyError='History could not be loaded: '+e.message}
+  finally{historyBusy=false;renderActivity();renderHeat()}
+ })();
+ return historySyncPromise;
 }
 async function enableReviewHistory(){
  const button=$('enable-history');button.disabled=true;button.textContent='Creating…';
@@ -1202,14 +1206,20 @@ function enqueueReviewHistory(word,action){
 }
 // A graded answer or written grammar recall is activity even if it was incorrect.
 // Log it separately from scheduled reviews; the spaced-repetition word is never modified.
-function recordVocabularyPractice(word,exercise,answers){
- if(!studyOnly||!word||!historyId||!answers.some(answer=>String(answer||'').trim()))return;
+async function recordVocabularyPractice(word,exercise,answers){
+ if(!studyOnly||!word||!answers.some(answer=>String(answer||'').trim()))return;
  const fingerprint=[word.id,exercise,iso(new Date()),...answers.map(answer=>String(answer||'').trim().normalize('NFKC'))].join('\u001f');
  if(vocabularyPracticeLogKeys.has(fingerprint))return;
  vocabularyPracticeLogKeys.add(fingerprint);
- enqueueReviewHistory(word,'practice').then(saved=>{
-  if(!saved)vocabularyPracticeLogKeys.delete(fingerprint);
- });
+ const initialToken=notionToken,initialSource=sourceId;
+ // Wait for the existing startup sync rather than losing a quick first practice.
+ if(historyBusy)await historySyncPromise;
+ else if(!historyId&&notionToken&&sourceId)await syncHistory();
+ if(!historyId||initialToken!==notionToken||initialSource!==sourceId){
+  vocabularyPracticeLogKeys.delete(fingerprint);return;
+ }
+ const saved=await enqueueReviewHistory(word,'practice');
+ if(!saved)vocabularyPracticeLogKeys.delete(fingerprint);
 }
 
 async function retrieveChildren(blockId){
