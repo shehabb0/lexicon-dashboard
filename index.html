@@ -226,10 +226,10 @@
   <article class="metric"><div class="metric-top"><span>Words mastered</span><span class="metric-icon"><svg><use href="#i-award"/></svg></span></div><div class="metric-num" id="mastered">0</div><div class="metric-note" id="mastered-note">0% of your collection</div></article>
   <article class="metric"><div class="metric-top"><span>Ready to review</span><span class="metric-icon"><svg><use href="#i-clock"/></svg></span></div><div class="metric-num" id="due">0</div><div class="metric-note">Due now, including overdue</div></article>
   <article class="metric"><div class="metric-top"><span>Overdue words</span><span class="metric-icon"><svg><use href="#i-fire"/></svg></span></div><div class="metric-num" id="overdue">0</div><div class="metric-note">Your catch-up priority</div></article>
-   <article class="metric streak-metric" id="streak-card" aria-live="polite"><div class="metric-top"><span>Study streak</span><span class="metric-icon streak-fire" aria-label="Fire">🔥</span></div><div class="metric-num streak-count"><span id="streak-days">—</span><span class="streak-unit" id="streak-unit">days</span></div><div class="metric-note" id="streak-note">Loading your Notion review history…</div><div class="streak-risk" id="streak-risk" hidden><div class="streak-risk-heading"><span>⚠ Streak at risk</span><span class="streak-risk-clock" id="streak-risk-clock" aria-live="off"></span></div><div class="streak-risk-message">Review before midnight to keep your streak.</div></div></article>
+   <article class="metric streak-metric" id="streak-card" aria-live="polite"><div class="metric-top"><span>Study streak</span><span class="metric-icon streak-fire" aria-label="Fire">🔥</span></div><div class="metric-num streak-count"><span id="streak-days">—</span><span class="streak-unit" id="streak-unit">days</span></div><div class="metric-note" id="streak-note">Loading your Notion review history…</div><div class="streak-risk" id="streak-risk" hidden><div class="streak-risk-heading"><span>⚠ Streak at risk</span><span class="streak-risk-clock" id="streak-risk-clock" aria-live="off"></span></div><div class="streak-risk-message">Practise or review before midnight to keep your streak.</div></div></article>
  </section>
  <section class="insights" id="analytics">
-  <article class="panel"><div class="panel-head"><div><h2>Learning activity</h2><div class="subtitle" id="activity-sub">A snapshot of your study rhythm</div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="chip" id="activity-range">Last 7 days</div><button class="track-cta" id="enable-history">＋ Enable history</button></div></div><div class="chart" id="activity-chart"></div><div class="xaxis" id="activity-days"></div><div class="chartfooter"><span><span class="legend-bullet" style="background:var(--mint)"></span>Lexicon review actions</span><span style="margin-left:auto" id="activity-total"></span></div><p class="track-help" id="track-help">Enable tracking to record reviews in Notion.</p></article>
+  <article class="panel"><div class="panel-head"><div><h2>Learning activity</h2><div class="subtitle" id="activity-sub">A snapshot of your study rhythm</div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="chip" id="activity-range">Last 7 days</div><button class="track-cta" id="enable-history">＋ Enable history</button></div></div><div class="chart" id="activity-chart"></div><div class="xaxis" id="activity-days"></div><div class="chartfooter"><span><span class="legend-bullet" style="background:var(--mint)"></span>Lexicon review &amp; practice actions</span><span style="margin-left:auto" id="activity-total"></span></div><p class="track-help" id="track-help">Enable tracking to record reviews in Notion.</p></article>
   <article class="panel"><div class="panel-head"><div><h2>Mastery progress</h2><div class="subtitle">Words you've made your own</div></div><div class="chip">Goal · 100%</div></div><div class="progress-content"><div class="donut" id="donut" style="--degree:0%"><div class="donut-inner"><div class="donut-val" id="donut-value">0%</div><div class="donut-label">mastered</div></div></div><div class="progress-side"><div class="progress-label" id="progress-label">Keep it going ✦</div><p>Every review builds a stronger foundation.</p><div class="progress-row"><span>Vocabulary mastered</span><strong id="progress-numbers">0 / 0</strong></div><div class="probar"><div id="progress-bar" style="width:0%"></div></div></div></div></article>
  </section>
  <section class="lowergrid">
@@ -463,6 +463,7 @@ let activeLanguageWorkspace='Italian';
 let catalogFilter='all',catalogSearch='',catalogLimit=60,studyOnly=false;
 let reviewSession=null,reviewActionBusy=false;
 let reviewHistorySaveQueue=Promise.resolve();
+const vocabularyPracticeLogKeys=new Set(); // Dedupe identical checked attempts within one study opening.
 let conjugationWordId=null,conjugationRequest=0,conjugationMode='view',practiceExercises=[];
 const conjugationCache=new Map();
 let grammarWordId=null,grammarRequest=0,grammarMode='read',grammarLesson=null;
@@ -666,7 +667,7 @@ function renderStreak(now=new Date()){
  const atRisk=streak.count>0&&streak.studiedYesterday&&!streak.studiedToday;
  countElement.textContent=String(streak.count);
  unit.textContent=streak.count===1?'day':'days';
- note.textContent=streak.studiedToday?'Reviewed today · keep the fire burning ✦':atRisk?'Your streak needs one review today':'Review a word today to start your streak';
+ note.textContent=streak.studiedToday?'Studied today · keep the fire burning ✦':atRisk?'A review or practice keeps your streak alive':'Practise or review today to start your streak';
  card.classList.toggle('active',streak.count>0);
  card.classList.toggle('at-risk',atRisk);
  warning.hidden=!atRisk;
@@ -682,11 +683,12 @@ function renderActivity(){
  const counts=Array.from({length:7},(_,i)=>actionsOn(addDays(i-6))),max=Math.max(1,...counts);
  $('activity-chart').innerHTML=counts.map((n,i)=>`<div class="bar-col"><div class="bar ${i===6?'accent':''}" data-count="${n}" style="--pct:${n?Math.max(5,n/max*94):0}"></div></div>`).join('');
  $('activity-days').innerHTML=Array.from({length:7},(_,i)=>`<span>${addDays(i-6).toLocaleDateString('en-US',{weekday:'short'})}</span>`).join('');
- $('activity-total').textContent=counts.reduce((a,b)=>a+b,0)+' recorded actions';
+ const recentPractice=historyEvents.filter(event=>event.action==='Practised'&&Array.from({length:7},(_,i)=>iso(addDays(i-6))).includes(iso(new Date(event.when)))).length;
+ $('activity-total').textContent=counts.reduce((a,b)=>a+b,0)+' recorded actions'+(recentPractice?' · '+recentPractice+' practised':'');
  $('activity-sub').textContent=historyId?'Live activity recorded in Notion':'Review history has not been enabled';
  $('activity-range').textContent=historyId?'Last 7 days · Live':'Last 7 days';
  $('enable-history').hidden=!!historyId;
- $('track-help').textContent=historyError|| (historyId?'Records Mark Reviewed, Forgot It and Mastered actions in Lexicon. Notion-native buttons are not included.':'Create a review history inside your existing Notion database. Past activity cannot be reconstructed.');
+ $('track-help').textContent=historyError|| (historyId?'Records checked vocabulary, verb and grammar practice alongside Reviewed, Forgot and Mastered actions. Practice never changes your Notion review schedule.':'Enable review history to count practice and review actions toward your streak. Past activity cannot be reconstructed.');
 }
 function renderHeat(){
  const values=Array.from({length:84},(_,i)=>actionsOn(addDays(i-83)));
@@ -860,6 +862,7 @@ function checkTranslation(e){
  }
  const reversed=reversedWord(word);
  const result=evaluateAnswer(typed,reversed?word.word:word.meaning,reversed?'reverse':'translation');
+ recordVocabularyPractice(word,'translation-'+(reversed?'reverse':'normal'),[typed]);
  const feedback=$('translation-feedback');feedback.hidden=false;
  feedback.className='quiz-feedback '+(result.state==='correct'?'ok':result.state==='close'?'close':'wrong');
  if(result.state==='correct'){
@@ -889,6 +892,7 @@ function closeReviewFlashcard(){
 }
 function openWord(id,fromReviewSession=false,viewOnly=false){
  const w=list.find(x=>x.id===id);if(!w)return;
+ vocabularyPracticeLogKeys.clear();
  studyOnly=!!viewOnly;
  if(!fromReviewSession)reviewSession=null;
  selectedId=id;
@@ -1120,10 +1124,20 @@ async function readReviewHistory(){
   const request={page_size:100,filter:{property:'Reviewed At',date:{on_or_after:iso(addDays(-83))}},sorts:[{property:'Reviewed At',direction:'descending'}]};
   if(cursor)request.start_cursor=cursor;
   const r=await notion('POST','/data_sources/'+encodeURIComponent(historyId)+'/query',request);
-  for(const page of r.results||[]){const when=page.properties?.['Reviewed At']?.date?.start||page.created_time;if(when&&!Number.isNaN(new Date(when).getTime()))entries.push({when,id:page.id})}
+  for(const page of r.results||[]){
+   const when=page.properties?.['Reviewed At']?.date?.start||page.created_time;
+   if(when&&!Number.isNaN(new Date(when).getTime()))entries.push({when,id:page.id,action:page.properties?.Action?.select?.name||''});
+  }
   cursor=r.has_more?r.next_cursor:null;
   if(entries.length>10000){cursor=null;console.warn('History limited to 10k results')}
  }while(cursor);
+ // A practice action may have been saved while the remote history request was in flight.
+ const seen=new Set(entries.map(event=>event.id).filter(Boolean));
+ for(const recent of historyEvents){
+  if(recent.id&&!seen.has(recent.id)&&iso(new Date(recent.when))>=iso(addDays(-83))){
+   entries.push(recent);seen.add(recent.id);
+  }
+ }
  historyEvents=entries;renderActivity();renderHeat();
 }
 async function syncHistory(){
@@ -1141,7 +1155,7 @@ async function enableReviewHistory(){
    const ds=await notion('POST','/data_sources',{
     parent:{type:'database_id',database_id:historyDatabaseId},
     title:[{type:'text',text:{content:HISTORY_NAME}}],
-    properties:{Review:{title:{}},'Reviewed At':{date:{}},Action:{select:{options:[{name:'Reviewed',color:'green'},{name:'Forgot',color:'red'},{name:'Mastered',color:'purple'}]}},'Word ID':{rich_text:{}},'Class Before':{number:{}}}
+    properties:{Review:{title:{}},'Reviewed At':{date:{}},Action:{select:{options:[{name:'Reviewed',color:'green'},{name:'Forgot',color:'red'},{name:'Mastered',color:'purple'},{name:'Practised',color:'blue'}]}},'Word ID':{rich_text:{}},'Class Before':{number:{}}}
    });
    if(!ds.id)throw new Error('Notion returned no new data source ID.');
    historyId=ds.id;
@@ -1152,10 +1166,10 @@ async function enableReviewHistory(){
 }
 async function recordHistoryAction(word,action){
  if(!historyId)return;
- const label=action==='remember'?'Reviewed':action==='forgot'?'Forgot':'Mastered';
+ const label=action==='practice'?'Practised':action==='remember'?'Reviewed':action==='forgot'?'Forgot':'Mastered';
  const reviewedAt=new Date().toISOString();
  const saved=await notion('POST','/pages',{parent:{type:'data_source_id',data_source_id:historyId},properties:{
-  Review:{title:[{type:'text',text:{content:word.word.slice(0,2000)||'Word review'}}]},
+  Review:{title:[{type:'text',text:{content:(action==='practice'?'Practice · ':'')+(word.word.slice(0,1980)||'Word')}}]},
   'Reviewed At':{date:{start:reviewedAt}},
   Action:{select:{name:label}},
   'Word ID':{rich_text:[{type:'text',text:{content:word.id}}]},
@@ -1163,24 +1177,38 @@ async function recordHistoryAction(word,action){
  }});
  // The Notion event is confirmed. Update charts locally instead of refetching 84 days of history.
  if(!saved?.id||!historyEvents.some(event=>event.id===saved.id)){
-  historyEvents.push({id:saved?.id||null,when:reviewedAt});
+  historyEvents.push({id:saved?.id||null,when:reviewedAt,action:label});
  }
  historyError='';
  renderActivity();
  renderHeat();
 }
 function enqueueReviewHistory(word,action){
- if(!historyId)return;
+ if(!historyId)return Promise.resolve(false);
  reviewHistorySaveQueue=reviewHistorySaveQueue.catch(()=>{}).then(async()=>{
   try{
    await recordHistoryAction(word,action);
    historyError='';
+   return true;
   }catch(err){
-   historyError='Review saved, but the activity log failed: '+err.message;
-   console.warn('Notion review saved; history log could not be updated',err);
-   renderActivity();
-   toast('Review saved, but history logging failed. Check your Notion connection.');
+   historyError=(action==='practice'?'Vocabulary practice finished, but the activity log failed: ':'Review saved, but the activity log failed: ')+err.message;
+   console.warn(action==='practice'?'Vocabulary practice history could not be updated':'Notion review saved; history log could not be updated',err);
+   renderActivity();renderHeat();
+   toast(action==='practice'?'Practice completed, but history logging failed. Try checking your answer again.':'Review saved, but history logging failed. Check your Notion connection.');
+   return false;
   }
+ });
+ return reviewHistorySaveQueue;
+}
+// A graded answer or written grammar recall is activity even if it was incorrect.
+// Log it separately from scheduled reviews; the spaced-repetition word is never modified.
+function recordVocabularyPractice(word,exercise,answers){
+ if(!studyOnly||!word||!historyId||!answers.some(answer=>String(answer||'').trim()))return;
+ const fingerprint=[word.id,exercise,iso(new Date()),...answers.map(answer=>String(answer||'').trim().normalize('NFKC'))].join('\u001f');
+ if(vocabularyPracticeLogKeys.has(fingerprint))return;
+ vocabularyPracticeLogKeys.add(fingerprint);
+ enqueueReviewHistory(word,'practice').then(saved=>{
+  if(!saved)vocabularyPracticeLogKeys.delete(fingerprint);
  });
 }
 
@@ -1418,6 +1446,7 @@ function gradeConjugation(e){
  summary.className='quiz-feedback '+(correct===ex.entries.length?'ok':correct||close?'close':'wrong');
  summary.textContent=correct+' / '+ex.entries.length+' correct'+(close?' · '+close+' nearly correct':'')+(correct===ex.entries.length?' — Excellent! ✦':'. Try again or reveal the correct answers when you are ready.');
  $('reveal-conjugation-answers').hidden=correct===ex.entries.length;
+ recordVocabularyPractice(list.find(w=>w.id===conjugationWordId),'conjugation-'+ex.id,boxes.map(input=>input.value));
 }
 async function showConjugation(wordId,force=false,mode='view'){
  const word=list.find(w=>w.id===wordId);
@@ -1659,6 +1688,7 @@ function checkGrammarTable(event){
  summary.className='quiz-feedback '+(good===inputs.length?'ok':good||close?'close':'wrong');
  summary.textContent=good+' / '+inputs.length+' exact matches'+(close?' · '+close+' nearly correct':'')+(review?' · '+review+' explanations to self-check':'')+'.';
  $('grammar-reveal').hidden=good===inputs.length;
+ recordVocabularyPractice(list.find(w=>w.id===grammarWordId),'table-'+$('grammar-table-select').value+'-'+$('grammar-column-select').value,inputs.map(input=>input.value));
 }
 function revealGrammarTableAnswers(){
  const button=$('grammar-reveal');if(button.hidden)return;
@@ -1708,6 +1738,8 @@ function revealGrammarRecall(){
  area.className='quiz-feedback grammar-recall-reference';
  area.textContent=showing?section.items.join('\n\n'):'';
  $('grammar-recall-show').textContent=showing?'🙈 Hide original notes':'👁 Reveal notes to compare';
+ if(showing&&$('grammar-recall-answer').value.trim())
+  recordVocabularyPractice(list.find(w=>w.id===grammarWordId),'rule-'+$('grammar-section-select').value,[$('grammar-recall-answer').value]);
 }
 function clearGrammarRecall(){
  renderGrammarRecallQuestion();$('grammar-recall-show').textContent='👁 Reveal notes to compare';
