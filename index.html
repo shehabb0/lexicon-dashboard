@@ -1754,8 +1754,11 @@ async function showGrammar(wordId,force=false,requestedMode='read'){
 function closeGrammar(){grammarRequest++;grammarWordId=null;$('grammar-overlay').classList.remove('open')}
 
 async function loadWords(silent=false){
+ const requestedToken=notionToken,requestedSource=sourceId;
  try {
   const words=await getAllWords();
+  // Ignore a response from an older connection after credentials changed or were forgotten.
+  if(requestedToken!==notionToken||requestedSource!==sourceId)return false;
   list=words.map(w=>({...w,next:parseDate(w.next)}));
   $('sampleflag').textContent='LIVE · NOTION CONNECTED';
   $('login-screen').classList.remove('open');
@@ -1765,6 +1768,7 @@ async function loadWords(silent=false){
   if(!silent)toast(`Synced ${list.length} words from Notion ✓`);
   return true;
  } catch(err) {
+  if(requestedToken!==notionToken||requestedSource!==sourceId)return false;
   if(err.status===401||err.status===403)$('login-screen').classList.add('open');
   $('login-error').textContent=err.message;
   if(silent)console.warn('Notion sync:',err.message);
