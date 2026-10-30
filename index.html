@@ -157,6 +157,13 @@
 .grammar-modal.grammar-compact-practice .practice-footer{margin:9px 0 5px}
 @media(max-width:600px){.grammar-modal.grammar-compact-practice{padding:17px 13px}.grammar-modal.grammar-compact-practice .table-practice-row{grid-template-columns:1fr;gap:5px}.grammar-modal.grammar-compact-practice .grammar-pair-prompt{font-size:18px}}
 .catalog-reverse-hint{font-size:9px;font-weight:690;letter-spacing:.15px;color:#bba8f9;margin-top:5px}
+/* One-day streak protection: warn only while yesterday's streak is still recoverable. */
+.streak-metric.at-risk{border-color:#ffbd6890;box-shadow:0 0 0 1px #ffbd6826,0 7px 23px #e68c2610}
+.streak-risk{position:relative;margin-top:11px;padding:9px 10px 10px;border:1px solid #e6a35664;border-radius:10px;background:#b76f261c;color:#ffce8d;line-height:1.4}
+.streak-risk[hidden]{display:none!important}
+.streak-risk-heading{display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;font-size:10px;font-weight:800;letter-spacing:.1px}
+.streak-risk-clock{font-size:9px;font-weight:780;color:#ffe1ac;white-space:nowrap}
+.streak-risk-message{font-size:10px;color:#edbf9d;margin-top:4px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -219,7 +226,7 @@
   <article class="metric"><div class="metric-top"><span>Words mastered</span><span class="metric-icon"><svg><use href="#i-award"/></svg></span></div><div class="metric-num" id="mastered">0</div><div class="metric-note" id="mastered-note">0% of your collection</div></article>
   <article class="metric"><div class="metric-top"><span>Ready to review</span><span class="metric-icon"><svg><use href="#i-clock"/></svg></span></div><div class="metric-num" id="due">0</div><div class="metric-note">Due now, including overdue</div></article>
   <article class="metric"><div class="metric-top"><span>Overdue words</span><span class="metric-icon"><svg><use href="#i-fire"/></svg></span></div><div class="metric-num" id="overdue">0</div><div class="metric-note">Your catch-up priority</div></article>
-   <article class="metric streak-metric" id="streak-card" aria-live="polite"><div class="metric-top"><span>Study streak</span><span class="metric-icon streak-fire" aria-label="Fire">🔥</span></div><div class="metric-num streak-count"><span id="streak-days">—</span><span class="streak-unit" id="streak-unit">days</span></div><div class="metric-note" id="streak-note">Loading your Notion review history…</div></article>
+   <article class="metric streak-metric" id="streak-card" aria-live="polite"><div class="metric-top"><span>Study streak</span><span class="metric-icon streak-fire" aria-label="Fire">🔥</span></div><div class="metric-num streak-count"><span id="streak-days">—</span><span class="streak-unit" id="streak-unit">days</span></div><div class="metric-note" id="streak-note">Loading your Notion review history…</div><div class="streak-risk" id="streak-risk" hidden><div class="streak-risk-heading"><span>⚠ Streak at risk</span><span class="streak-risk-clock" id="streak-risk-clock" aria-live="off"></span></div><div class="streak-risk-message">Review before midnight to keep your streak.</div></div></article>
  </section>
  <section class="insights" id="analytics">
   <article class="panel"><div class="panel-head"><div><h2>Learning activity</h2><div class="subtitle" id="activity-sub">A snapshot of your study rhythm</div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="chip" id="activity-range">Last 7 days</div><button class="track-cta" id="enable-history">＋ Enable history</button></div></div><div class="chart" id="activity-chart"></div><div class="xaxis" id="activity-days"></div><div class="chartfooter"><span><span class="legend-bullet" style="background:var(--mint)"></span>Lexicon review actions</span><span style="margin-left:auto" id="activity-total"></span></div><p class="track-help" id="track-help">Enable tracking to record reviews in Notion.</p></article>
@@ -642,8 +649,9 @@ function calculateStudyStreak(events,now=new Date()){
  }
  return {count,studiedToday,studiedYesterday};
 }
-function renderStreak(){
- const countElement=$('streak-days'),unit=$('streak-unit'),note=$('streak-note'),card=$('streak-card');
+function renderStreak(now=new Date()){
+ const countElement=$('streak-days'),unit=$('streak-unit'),note=$('streak-note'),card=$('streak-card'),warning=$('streak-risk');
+ warning.hidden=true;card.classList.remove('at-risk');
  if(!historyId){
   countElement.textContent='—';unit.textContent='days';
   note.textContent=historyError?'Unable to load Notion history':'Enable review history to begin';
@@ -654,11 +662,20 @@ function renderStreak(){
   note.textContent='History sync error · refresh to retry';
   card.classList.remove('active');return;
  }
- const streak=calculateStudyStreak(historyEvents);
+ const streak=calculateStudyStreak(historyEvents,now);
+ const atRisk=streak.count>0&&streak.studiedYesterday&&!streak.studiedToday;
  countElement.textContent=String(streak.count);
  unit.textContent=streak.count===1?'day':'days';
- note.textContent=streak.studiedToday?'Reviewed today · keep the fire burning ✦':streak.studiedYesterday?'Review today to keep your streak 🔥':'Review a word today to start your streak';
+ note.textContent=streak.studiedToday?'Reviewed today · keep the fire burning ✦':atRisk?'Your streak needs one review today':'Review a word today to start your streak';
  card.classList.toggle('active',streak.count>0);
+ card.classList.toggle('at-risk',atRisk);
+ warning.hidden=!atRisk;
+ if(atRisk){
+  const midnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+  const minutes=Math.max(1,Math.ceil((midnight-now)/60000));
+  const hours=Math.floor(minutes/60),remaining=minutes%60;
+  $('streak-risk-clock').textContent=(hours?hours+'h '+(remaining?remaining+'m':'') :minutes+'m')+' left';
+ }
 }
 function actionsOn(date){return historyEvents.filter(e=>iso(new Date(e.when))===iso(date)).length}
 function renderActivity(){
@@ -2246,6 +2263,9 @@ if(notionToken&&sourceId)loadWords(true);
 else $('login-screen').classList.add('open');
 render();
 setInterval(()=>{if(notionToken&&sourceId&&document.visibilityState==='visible')loadWords(true)},60000);
+// Keep the midnight deadline accurate even when no new Notion review arrives.
+setInterval(()=>{if(document.visibilityState==='visible')renderStreak()},60000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')renderStreak()});
 })();
 </script>
 </body>
