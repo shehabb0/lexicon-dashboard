@@ -432,8 +432,10 @@
   <input id="notion-source" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" spellcheck="false" required style="background:#0c172a;border:1px solid #41546c;border-radius:11px;color:#fff;width:100%;padding:12px 15px;outline:none;margin-bottom:12px" />
   <label for="notion-token" style="display:block;text-align:left;font-size:11px;color:#bfd1e5;margin:0 0 5px">Notion integration token</label>
   <input id="notion-token" type="password" placeholder="Paste your Notion secret here" autocomplete="off" spellcheck="false" required style="background:#0c172a;border:1px solid #41546c;border-radius:11px;color:#fff;width:100%;padding:12px 15px;outline:none;margin-bottom:14px" />
-  <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#8fa3c0;cursor:pointer;text-align:left;margin-bottom:17px"><input id="remember-connection" type="checkbox" style="accent-color:#7cf4c5" /> Remember connection on this browser (stores token in browser storage)</label>
+  <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#bdd6cf;cursor:pointer;text-align:left;margin-bottom:9px"><input id="remember-connection" type="checkbox" checked style="accent-color:#7cf4c5" /> Stay connected when I reopen Lexicon</label>
+  <p style="font-size:10px;color:#91a6c1;line-height:1.6;text-align:left;margin:0 0 16px">On a personal device, this remembers your Notion connection in the browser. Uncheck on a shared device to keep the token for this tab only.</p>
   <button class="modalbutton green" id="connect" type="submit" style="width:100%">Connect to Notion →</button>
+  <button class="modalbutton danger" id="forget-notion-connection" type="button" hidden style="width:100%;margin-top:10px">Disconnect &amp; forget this browser</button>
   <p id="login-error" style="color:#ff9eae;font-size:11px;margin-top:14px;min-height:14px;overflow-wrap:anywhere"></p>
   <p style="color:#677e9d;font-size:10px;margin:8px 0 0;line-height:1.6">Anyone who gets your token can act within its Notion permissions. Don't add the token to GitHub or your HTML source.</p>
 </form></div>
@@ -493,9 +495,36 @@ function toggleReverseMode(){
  if(selectedId&&$('overlay').classList.contains('open'))openWord(selectedId,!!reviewSession,studyOnly);
 }
 let dataSourceSchema=null, schemaSourceId='';
-const SETTINGS_KEY='lexicon_notion_browser_connection';
-let notionToken='', sourceId='';
-try {const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(saved?.token&&saved?.sourceId){notionToken=saved.token;sourceId=saved.sourceId}}catch(e){console.warn('Could not read saved connection')}
+const SETTINGS_KEY='lexicon_notion_browser_connection'; // Existing trusted-browser key; preserves previous saved connections.
+const SOURCE_STORAGE_KEY='lexicon_notion_data_source_v1';
+const SESSION_TOKEN_KEY='lexicon_notion_session_token_v1';
+let notionToken='', sourceId='',rememberConnectionOnDevice=false;
+try {
+ const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
+ const remembered=typeof saved?.token==='string'&&typeof saved?.sourceId==='string'&&!!saved.token&&!!saved.sourceId;
+ const tabToken=sessionStorage.getItem(SESSION_TOKEN_KEY)||'';
+ sourceId=remembered?saved.sourceId:localStorage.getItem(SOURCE_STORAGE_KEY)||saved?.sourceId||'';
+ notionToken=tabToken||(remembered?saved.token:'');
+ rememberConnectionOnDevice=remembered;
+}catch(e){console.warn('Could not restore the Notion connection from this browser')}
+function persistNotionConnection(remember){
+ // Like MYOS: tab-only sessionStorage, plus optional browser-persistent localStorage.
+ let persisted=true;
+ try{localStorage.setItem(SOURCE_STORAGE_KEY,sourceId)}catch(e){persisted=false}
+ try{sessionStorage.setItem(SESSION_TOKEN_KEY,notionToken)}catch(e){persisted=false}
+ try{
+  if(remember)localStorage.setItem(SETTINGS_KEY,JSON.stringify({sourceId,token:notionToken}));
+  else localStorage.removeItem(SETTINGS_KEY);
+ }catch(e){persisted=false}
+ rememberConnectionOnDevice=remember&&persisted;
+ return persisted;
+}
+function clearStoredNotionConnection(){
+ try{localStorage.removeItem(SETTINGS_KEY)}catch(e){}
+ try{localStorage.removeItem(SOURCE_STORAGE_KEY)}catch(e){}
+ try{sessionStorage.removeItem(SESSION_TOKEN_KEY)}catch(e){}
+ rememberConnectionOnDevice=false;
+}
 const NOTION_API='https://api.notion.com/v1', NOTION_VERSION='2026-03-11';
 let historyId=null,historyDatabaseId=null,historySourceKey='',historyBusy=false,historyEvents=[],historyError='';
 const HISTORY_NAME='Lexicon Review History';
@@ -2107,7 +2136,7 @@ $('import').onclick=()=>activeWorkspace==='monthly'?(monthRootId?loadAvailableMo
  $('add-cancel').onclick=()=>$('add-overlay').classList.remove('open');
  $('add-overlay').onclick=e=>{if(e.target===$('add-overlay'))$('add-overlay').classList.remove('open')};
  $('add-word-form').addEventListener('submit',saveNewWord);
-$('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('login-error').textContent='';$('login-screen').classList.add('open')};
+$('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('remember-connection').checked=rememberConnectionOnDevice;$('forget-notion-connection').hidden=!(notionToken&&sourceId);$('login-error').textContent='';$('login-screen').classList.add('open')};
 $('start').onclick=startReviewSession;
 $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('clear-translation').onclick=()=>{resetTranslationPractice(list.find(w=>w.id===selectedId));$('translation-attempt').focus()};
@@ -2176,22 +2205,39 @@ $('queue-more').onclick=()=>{queueLimit+=30;render()};
 });
  $('login-form').onsubmit=async e=>{
   e.preventDefault();
+  const previous={sourceId,notionToken};
   sourceId=$('notion-source').value.trim();
   notionToken=$('notion-token').value.trim();
   $('connect').disabled=true;$('login-error').textContent='Connecting to Notion…';
   const ok=await loadWords(true);
   if(ok){
-   try{
-    if($('remember-connection').checked)localStorage.setItem(SETTINGS_KEY,JSON.stringify({sourceId,token:notionToken}));
-    else localStorage.removeItem(SETTINGS_KEY);
-   }catch(e){toast('Could not save your connection on this browser')}
-   toast('Connected to your Notion database ✓');
+   if(!persistNotionConnection($('remember-connection').checked))toast('Connected, but browser storage is unavailable. You may need to connect again after closing Lexicon.');
+   else toast('Connected to Notion ✓ Your browser connection is ready.');
+   $('forget-notion-connection').hidden=false;
+  }else{
+   // Never replace a valid remembered connection with an unverified token.
+   sourceId=previous.sourceId;notionToken=previous.notionToken;
   }
   $('connect').disabled=false;
  };
+$('forget-notion-connection').onclick=()=>{
+ clearStoredNotionConnection();
+ notionToken='';sourceId='';dataSourceSchema=null;schemaSourceId='';
+ list=[];historyEvents=[];historyId=null;historyDatabaseId=null;historySourceKey='';
+ reviewSession=null;selectedId=null;
+ closeReviewFlashcard();closeGrammar();closeConjugation();
+ $('sampleflag').textContent='NOT CONNECTED';
+ $('notion-source').value='';$('notion-token').value='';
+ $('remember-connection').checked=true;
+ $('forget-notion-connection').hidden=true;
+ $('login-error').textContent='Connection removed from this browser. Enter your Notion details to reconnect.';
+ render();
+ $('login-screen').classList.add('open');
+};
 $('notion-source').value=sourceId;
 $('notion-token').value=notionToken;
-$('remember-connection').checked=!!notionToken;
+$('remember-connection').checked=rememberConnectionOnDevice||!notionToken;
+$('forget-notion-connection').hidden=!(notionToken&&sourceId);
 if(notionToken&&sourceId)loadWords(true);
 else $('login-screen').classList.add('open');
 render();
