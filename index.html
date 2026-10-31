@@ -134,7 +134,13 @@
 .daily-practice-button{display:inline-flex;align-items:center;gap:12px;justify-content:center;min-height:40px;white-space:nowrap;border-radius:10px;padding:10px 13px;background:#1b3140;color:#b8e5df;border:1px solid #416270;font-size:11px;font-weight:780;transition:background .16s,border-color .16s}
 .daily-practice-button:hover{background:#254356;border-color:#6aa999}
 .daily-practice-button:disabled{opacity:.45;cursor:not-allowed}
+.daily-practice-button[hidden]{display:none!important}
 .daily-practice-button span{color:#85cbb2;font-size:13px}
+.daily-practice-button.is-primary{background:linear-gradient(105deg,#80f3c7,#96ecd8);color:#113132;border-color:#b6fff033}
+.daily-practice-button.is-primary span{color:#113132}
+.daily-practice-button.is-primary:hover{filter:brightness(1.08)}
+.hero.daily-panel .hero-start.is-secondary{background:#1b3140;color:#b8e5df;border:1px solid #416270}
+.hero.daily-panel .hero-start.is-secondary:hover{background:#254356;filter:none}
 @media(max-width:920px){.daily-panel-main{align-items:flex-start;flex-wrap:wrap}.daily-panel-actions{justify-content:flex-start}}
 @media(max-width:600px){
  .hero.daily-panel{padding:17px;gap:13px}
@@ -619,6 +625,9 @@ function renderHero(){
  const heading=$('hero-focus-title'),summary=$('hero-review-summary'),preview=$('hero-next'),start=$('start'),practice=$('hero-practice');
  const canPractice=connected&&quickPracticeCandidates().length>0;
  practice.disabled=!canPractice;
+ practice.hidden=!canPractice;
+ practice.classList.toggle('is-primary',connected&&!next&&canPractice);
+ start.classList.toggle('is-secondary',connected&&!next&&canPractice);
  if(!connected){
   heading.textContent='Your next study session';
   summary.textContent='Connect Notion to load your review queue.';
@@ -628,8 +637,8 @@ function renderHero(){
  }else if(!next){
   heading.textContent='All caught up for today';
   summary.textContent=canPractice?'No reviews due. Keep learning with quick practice.':'No reviews due right now.';
-  start.disabled=true;
-  start.innerHTML='No reviews due <span aria-hidden="true">✓</span>';
+  start.disabled=false;
+  start.innerHTML='Browse vocabulary <span aria-hidden="true">↗</span>';
   preview.hidden=true;
  }else{
   heading.textContent=due.length+' '+(due.length===1?'word':'words')+' ready to review';
@@ -2212,7 +2221,11 @@ $('import').onclick=()=>activeWorkspace==='monthly'?(monthRootId?loadAvailableMo
  $('add-overlay').onclick=e=>{if(e.target===$('add-overlay'))$('add-overlay').classList.remove('open')};
  $('add-word-form').addEventListener('submit',saveNewWord);
 $('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('remember-connection').checked=rememberConnectionOnDevice;$('forget-notion-connection').hidden=!(notionToken&&sourceId);$('login-error').textContent='';$('login-screen').classList.add('open')};
-$('start').onclick=()=>{if($('sampleflag').textContent!=='LIVE · NOTION CONNECTED'){$('login-screen').classList.add('open');return}startReviewSession()};
+$('start').onclick=()=>{
+ if($('sampleflag').textContent!=='LIVE · NOTION CONNECTED'){$('login-screen').classList.add('open');return}
+ if(dueWords().length)startReviewSession();
+ else showWorkspace('catalog','catalog');
+};
 $('hero-practice').onclick=startQuickPractice;
 $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('clear-translation').onclick=()=>{resetTranslationPractice(list.find(w=>w.id===selectedId));$('translation-attempt').focus()};
