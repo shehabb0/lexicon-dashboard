@@ -116,7 +116,10 @@
 .daily-panel-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .daily-panel-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:9px;font-weight:800;letter-spacing:1.6px;color:#9dc7c6}
 .daily-panel-indicator{width:7px;height:7px;flex:none;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px #7cf4c512}
-.daily-panel .sample{font-size:9px;letter-spacing:.3px;padding:3px 8px;color:#bddacb;background:#25413765;border-color:#598b8170}
+.topright .top-connection-status{display:inline-flex;align-items:center;max-width:100%;font-size:9px;letter-spacing:.2px;padding:7px 9px;color:#a5b8ce;background:#19293a;border:1px solid #43576b;border-radius:8px;white-space:nowrap}
+.topright .top-connection-status.is-connected{color:#b8efda;background:#213d37;border-color:#427b6f}
+.topright .refresh-icon-button{display:inline-grid;place-items:center;flex:none;width:39px;height:39px;min-width:39px;padding:0;font-size:22px;line-height:1;border-radius:10px}
+@media(max-width:600px){.topright .top-connection-status{font-size:8px;padding:6px 8px}.topright .refresh-icon-button{width:36px;height:36px;min-width:36px;font-size:20px}}
 .daily-panel-main{display:flex;justify-content:space-between;align-items:center;gap:18px;min-width:0}
 .daily-panel-info{min-width:0;flex:1 1 auto}
 .daily-panel h2{font-size:clamp(18px,1.8vw,23px);font-weight:800;letter-spacing:-.65px;line-height:1.22;color:#eff9ff;margin:0 0 4px}
@@ -205,12 +208,11 @@
   <div class="sidebar-foot"><div class="mini-card"><span style="color:var(--mint);font-size:10px;font-weight:850;letter-spacing:1px">YOUR JOURNEY ✦</span><strong style="display:block;margin-top:7px">One word at a time.</strong><p>Consistency turns new words into a second language.</p><div class="track"><div class="fill" id="side-progress"></div></div></div><div class="sidebar-bottom">✦ Designed for curious minds</div></div>
 </aside>
 <main class="main" id="overview">
- <header class="topbar"><div class="topbar-left"><div class="language-workspace-switch" role="group" aria-label="Choose study language"><button type="button" class="workspace-lang-choice active" data-workspace-language="Italian" aria-pressed="true" title="Italian workspace"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="Italian flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#009246"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ce2b37"/></svg><span>Italian</span></button><button type="button" class="workspace-lang-choice soon" data-workspace-language="French" aria-pressed="false" title="French workspace coming soon"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="French flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#0055a4"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ef4135"/></svg><span>French</span><span class="language-soon-label">Soon</span></button></div><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn reverse-switch" type="button" id="reverse-mode" aria-pressed="false" title="Show the translation first and type the original word">⇄ Reverse: OFF</button><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <button class="import-btn" id="import">↻ Refresh Notion</button></div></header>
+ <header class="topbar"><div class="topbar-left"><div class="language-workspace-switch" role="group" aria-label="Choose study language"><button type="button" class="workspace-lang-choice active" data-workspace-language="Italian" aria-pressed="true" title="Italian workspace"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="Italian flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#009246"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ce2b37"/></svg><span>Italian</span></button><button type="button" class="workspace-lang-choice soon" data-workspace-language="French" aria-pressed="false" title="French workspace coming soon"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="French flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#0055a4"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ef4135"/></svg><span>French</span><span class="language-soon-label">Soon</span></button></div><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn reverse-switch" type="button" id="reverse-mode" aria-pressed="false" title="Show the translation first and type the original word">⇄ Reverse: OFF</button><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <span class="sample top-connection-status" id="sampleflag" role="status" aria-live="polite">NOT CONNECTED</span> <button class="import-btn refresh-icon-button" id="import" type="button" title="Refresh Notion" aria-label="Refresh Notion">↻</button></div></header>
  <div id="vocabulary-workspace">
  <section class="hero daily-panel" aria-label="Today's Italian study">
    <div class="daily-panel-top">
      <span class="daily-panel-eyebrow"><span class="daily-panel-indicator" aria-hidden="true"></span> TODAY'S STUDY</span>
-     <span class="sample" id="sampleflag">NOT CONNECTED</span>
    </div>
    <div class="daily-panel-main">
      <div class="daily-panel-info">
@@ -1841,6 +1843,7 @@ async function loadWords(silent=false){
   if(requestedToken!==notionToken||requestedSource!==sourceId)return false;
   list=words.map(w=>({...w,next:parseDate(w.next)}));
   $('sampleflag').textContent='LIVE · NOTION CONNECTED';
+  $('sampleflag').classList.add('is-connected');
   $('login-screen').classList.remove('open');
   $('login-error').textContent='';
   render();
@@ -2316,6 +2319,7 @@ $('forget-notion-connection').onclick=()=>{
  reviewSession=null;selectedId=null;
  closeReviewFlashcard();closeGrammar();closeConjugation();
  $('sampleflag').textContent='NOT CONNECTED';
+ $('sampleflag').classList.remove('is-connected');
  $('notion-source').value='';$('notion-token').value='';
  $('remember-connection').checked=true;
  $('forget-notion-connection').hidden=true;
