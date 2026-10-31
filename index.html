@@ -106,39 +106,45 @@
 .language-soon-label{font-size:8px;letter-spacing:.3px;background:#28344c;border:1px solid #44516d;color:#b8c4da;padding:2px 4px;border-radius:5px;font-weight:780}
 @media(max-width:600px){.topbar-left{gap:9px}.workspace-lang-choice{padding:7px}.language-soon-label{font-size:7px}}
 
-/* Refined daily-review hero — isolated from all other dashboard sections. */
-.hero{position:relative;isolation:isolate;min-height:284px;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(225px,.85fr);gap:24px;align-items:center;padding:35px 40px;background:radial-gradient(ellipse 520px 300px at 100% 0%,#6372bd35,transparent 74%),linear-gradient(119deg,#163039 0%,#162c40 52%,#212847 100%);border:1px solid #45687792;border-radius:23px;overflow:hidden;box-shadow:0 19px 55px #050c1d59;margin-bottom:20px}
-.hero::before{content:"";position:absolute;right:0;top:0;width:48%;height:100%;background-image:radial-gradient(#b7e8de2b 1px,transparent 1px);background-size:23px 23px;mask-image:linear-gradient(to left,#000,transparent);opacity:.44;pointer-events:none;z-index:-1}
-.hero-copy{position:relative;z-index:1;min-width:0}
-.hero-eyebrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#a4e8d1;letter-spacing:1.8px;font-size:9px;font-weight:820}
-.hero-eyebrow-star{color:#a0eed5;font-size:14px}
-.hero-eyebrow .sample{letter-spacing:.45px;font-size:9px;padding:4px 8px;background:#253e4d;border-color:#5d867d;color:#d3eddf}
-.hero h1{font-weight:790;font-size:clamp(30px,3.45vw,46px);line-height:1.12;letter-spacing:-1.75px;margin:15px 0 11px;max-width:630px}
-.hero h1 em{font-style:normal;background:linear-gradient(110deg,#7df2c8,#b4e9ff);color:transparent;-webkit-background-clip:text;background-clip:text}
-.hero p{font-size:12.5px;color:#aec3d2;line-height:1.76;max-width:450px;margin:0 0 23px}
-.hero-actions{display:flex;align-items:center;gap:17px;flex-wrap:wrap}
-.hero .hero-start{background:linear-gradient(105deg,#80f3c7,#96ecd8);border:1px solid #b6fff033;color:#113132;font-size:12px;font-weight:850;padding:13px 17px 13px 19px;border-radius:11px;box-shadow:0 9px 25px #61c5a12e;transition:transform .16s,box-shadow .16s}
-.hero .hero-start:hover{transform:translateY(-2px);box-shadow:0 13px 28px #61c5a13b}
-.hero .hero-start span{font-size:15px;margin-left:20px}
-.hero-due-status{display:flex;align-items:center;gap:8px;font-size:10.5px;color:#bdcfd8;line-height:1.45;max-width:215px}
-.hero-status-dot{display:block;flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:#82edc4;box-shadow:0 0 0 4px #8be4bf1a}
-.hero-card-scene{height:228px;width:100%;max-width:325px;position:relative;justify-self:end;display:grid;place-items:center;margin:0 11px 0 0}
-.hero-card-back{position:absolute;inset:12px 6px 10px 11px;transform:rotate(7deg);border:1px solid #8ec3c638;border-radius:19px;background:linear-gradient(135deg,#355b68b8,#35466da8);box-shadow:0 17px 42px #0003}
-.hero-preview-card{position:relative;z-index:1;width:100%;min-height:203px;transform:rotate(-4deg);display:flex;flex-direction:column;justify-content:space-between;padding:19px 21px 16px;border-radius:18px;background:linear-gradient(145deg,#f5fcf7,#e4f0ee 65%,#d5e8ea);border:1px solid #e7fff6;box-shadow:0 17px 37px #09192b7e;color:#182e35;overflow:hidden}
-.hero-preview-card::after{content:"";position:absolute;width:175px;height:175px;right:-82px;top:14px;border:1px solid #769a9c30;border-radius:50%;box-shadow:0 0 0 23px #92b9b711,0 0 0 47px #92b9b70a;pointer-events:none}
-.hero-preview-top,.hero-preview-bottom{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:10px}
-.hero-preview-brand{font-size:10px;font-weight:850;letter-spacing:2px;color:#284c53}.hero-preview-sparkle{color:#4e958c}
-.hero-preview-card .lang-flag{width:22px;height:15px;box-shadow:0 0 0 1px #203a4133}
-.hero-preview-body{position:relative;z-index:1;min-width:0;margin:13px 0 14px}
-.hero-preview-kicker{font-size:9px;letter-spacing:1.55px;color:#66838b;font-weight:860;margin-bottom:8px}
-.hero-preview-word{font-size:clamp(20px,2.1vw,29px);font-weight:780;letter-spacing:-.9px;line-height:1.16;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-height:72px;color:#17373a}
-.hero-preview-bottom{border-top:1px solid #a7bfbf5e;padding-top:12px;font-size:10px;color:#668087;font-weight:700}
-.hero-preview-arrow{width:23px;height:23px;display:grid;place-items:center;border-radius:7px;background:#d0e5db;color:#267a68;font-size:14px}
-.hero-accent-dot{position:absolute;z-index:2;border-radius:50%;pointer-events:none}.hero-accent-one{width:12px;height:12px;top:4px;right:-2px;background:#8ad8c4;box-shadow:0 0 0 7px #75cfb218}.hero-accent-two{width:8px;height:8px;bottom:6px;left:-3px;background:#a1a2ed}
-@media(max-width:1100px){.hero{padding:30px;grid-template-columns:minmax(0,1.5fr) minmax(210px,.8fr);gap:15px}.hero h1{font-size:clamp(29px,3.5vw,40px)}.hero-card-scene{margin-right:0}}
-@media(max-width:800px){.hero{grid-template-columns:1fr;gap:17px}.hero-card-scene{max-width:350px;justify-self:start;margin-left:5px}.hero p{max-width:580px}}
-@media(max-width:610px){.hero{padding:25px 22px;min-height:0}.hero h1{font-size:clamp(29px,7vw,37px)}.hero-card-scene{display:none}.hero p{margin-bottom:19px}.hero-actions{gap:13px}}
-
+/* A compact, task-first study hub. Replaces the oversized decorative hero. */
+.hero.daily-panel{
+ display:flex;flex-direction:column;gap:15px;min-height:0;
+ padding:19px 23px 21px;margin-bottom:18px;
+ background:radial-gradient(ellipse 450px 200px at 98% 0%,#355c6a27,transparent 78%),linear-gradient(118deg,#152735,#141f32 70%,#1a2239);
+ border:1px solid #395465bf;border-radius:17px;box-shadow:0 11px 30px #030b1b42;
+}
+.daily-panel-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.daily-panel-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:9px;font-weight:800;letter-spacing:1.6px;color:#9dc7c6}
+.daily-panel-indicator{width:7px;height:7px;flex:none;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px #7cf4c512}
+.daily-panel .sample{font-size:9px;letter-spacing:.3px;padding:3px 8px;color:#bddacb;background:#25413765;border-color:#598b8170}
+.daily-panel-main{display:flex;justify-content:space-between;align-items:center;gap:18px;min-width:0}
+.daily-panel-info{min-width:0;flex:1 1 auto}
+.daily-panel h2{font-size:clamp(18px,1.8vw,23px);font-weight:800;letter-spacing:-.65px;line-height:1.22;color:#eff9ff;margin:0 0 4px}
+.hero.daily-panel .daily-panel-summary{font-size:11px;line-height:1.5;color:#9eb6c7;max-width:none;margin:0}
+.daily-panel-next{display:flex;align-items:center;gap:8px;margin-top:9px;min-width:0;flex-wrap:wrap}
+.daily-panel-next[hidden]{display:none!important}
+.daily-panel-next-label{font-size:9px;font-weight:820;letter-spacing:.65px;color:#78c5ae}
+.daily-panel-next strong{font-size:11px;font-weight:750;color:#e0f7ed;max-width:min(38vw,265px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.daily-panel-next-type{font-size:10px;color:#91a6bb;white-space:nowrap}
+.daily-panel-actions{display:flex;align-items:center;gap:9px;justify-content:flex-end;flex:0 0 auto;flex-wrap:wrap}
+.hero.daily-panel .hero-start{border-radius:10px;padding:11px 16px;font-size:11px;box-shadow:none;white-space:nowrap;min-height:40px}
+.hero.daily-panel .hero-start span{margin-left:10px;font-size:13px;line-height:1}
+.hero.daily-panel .hero-start:hover{transform:none;filter:brightness(1.08);box-shadow:0 7px 18px #7cf4c51d}
+.hero.daily-panel .hero-start:disabled{opacity:.5;cursor:not-allowed;filter:none;box-shadow:none;transform:none}
+.daily-practice-button{display:inline-flex;align-items:center;gap:12px;justify-content:center;min-height:40px;white-space:nowrap;border-radius:10px;padding:10px 13px;background:#1b3140;color:#b8e5df;border:1px solid #416270;font-size:11px;font-weight:780;transition:background .16s,border-color .16s}
+.daily-practice-button:hover{background:#254356;border-color:#6aa999}
+.daily-practice-button:disabled{opacity:.45;cursor:not-allowed}
+.daily-practice-button span{color:#85cbb2;font-size:13px}
+@media(max-width:920px){.daily-panel-main{align-items:flex-start;flex-wrap:wrap}.daily-panel-actions{justify-content:flex-start}}
+@media(max-width:600px){
+ .hero.daily-panel{padding:17px;gap:13px}
+ .daily-panel-main{gap:12px}
+ .daily-panel h2{font-size:20px}
+ .daily-panel-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .hero.daily-panel .hero-start,.daily-practice-button{width:100%;padding:10px 9px;min-width:0}
+ .daily-panel-next strong{max-width:min(62vw,235px)}
+}
+@media(max-width:370px){.daily-panel-actions{grid-template-columns:1fr}}
 
 /* Compact grammar translation drills, independent of vocabulary Table practice. */
 .grammar-modal.grammar-compact-practice{width:min(100%,680px);padding:23px 25px}
@@ -195,26 +201,22 @@
 <main class="main" id="overview">
  <header class="topbar"><div class="topbar-left"><div class="language-workspace-switch" role="group" aria-label="Choose study language"><button type="button" class="workspace-lang-choice active" data-workspace-language="Italian" aria-pressed="true" title="Italian workspace"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="Italian flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#009246"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ce2b37"/></svg><span>Italian</span></button><button type="button" class="workspace-lang-choice soon" data-workspace-language="French" aria-pressed="false" title="French workspace coming soon"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="French flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#0055a4"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ef4135"/></svg><span>French</span><span class="language-soon-label">Soon</span></button></div><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn reverse-switch" type="button" id="reverse-mode" aria-pressed="false" title="Show the translation first and type the original word">⇄ Reverse: OFF</button><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <button class="import-btn" id="import">↻ Refresh Notion</button></div></header>
  <div id="vocabulary-workspace">
- <section class="hero" aria-label="Your daily Italian review">
-  <div class="hero-copy">
-   <div class="hero-eyebrow"><span class="hero-eyebrow-star">✦</span><span>YOUR DAILY ITALIAN STUDIO</span><span class="sample" id="sampleflag">NOT CONNECTED</span></div>
-   <h1>Make your Italian<br><em>second nature.</em></h1>
-   <p>Just a few focused minutes can go a long way. Come back to the words that matter, right when they're ready to be remembered.</p>
-   <div class="hero-actions">
-    <button class="primary hero-start" id="start">Start today's review <span aria-hidden="true">↗</span></button>
-    <div class="hero-due-status" role="status" aria-live="polite"><span class="hero-status-dot" aria-hidden="true"></span><span id="hero-review-summary">Your next review starts here</span></div>
+ <section class="hero daily-panel" aria-label="Today's Italian study">
+   <div class="daily-panel-top">
+     <span class="daily-panel-eyebrow"><span class="daily-panel-indicator" aria-hidden="true"></span> TODAY'S STUDY</span>
+     <span class="sample" id="sampleflag">NOT CONNECTED</span>
    </div>
-  </div>
-  <div class="hero-card-scene" aria-label="Next review preview">
-   <div class="hero-card-back" aria-hidden="true"></div>
-   <div class="hero-preview-card">
-    <div class="hero-preview-top"><span class="hero-preview-brand">LEXICON <span class="hero-preview-sparkle">✦</span></span><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="Italian flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#009246"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ce2b37"/></svg></div>
-    <div class="hero-preview-body"><div class="hero-preview-kicker" id="hero-next-label">READY WHEN YOU ARE</div><div class="hero-preview-word" id="hero-next-word">Un passo alla volta.</div></div>
-    <div class="hero-preview-bottom"><span id="hero-next-type">One word at a time</span><span class="hero-preview-arrow" aria-hidden="true">↗</span></div>
+   <div class="daily-panel-main">
+     <div class="daily-panel-info">
+       <h2 id="hero-focus-title">Your next study session</h2>
+       <p class="daily-panel-summary" id="hero-review-summary" role="status" aria-live="polite">Connect Notion to see what's ready.</p>
+       <div class="daily-panel-next" id="hero-next" hidden><span class="daily-panel-next-label">UP NEXT</span><strong id="hero-next-word">—</strong><span class="daily-panel-next-type" id="hero-next-type"></span></div>
+     </div>
+     <div class="daily-panel-actions">
+       <button type="button" class="primary hero-start" id="start">Start review <span aria-hidden="true">↗</span></button>
+       <button type="button" class="daily-practice-button" id="hero-practice">✎ Quick practice <span aria-hidden="true">↗</span></button>
+     </div>
    </div>
-   <div class="hero-accent-dot hero-accent-one" aria-hidden="true"></div>
-   <div class="hero-accent-dot hero-accent-two" aria-hidden="true"></div>
-  </div>
  </section>
  <section class="metrics" aria-label="Vocabulary statistics">
   <article class="metric"><div class="metric-top"><span>Total vocabulary</span><span class="metric-icon"><svg><use href="#i-book"/></svg></span></div><div class="metric-num" id="total">0</div></article>
@@ -595,24 +597,46 @@ function renderCatalog(){
  document.querySelectorAll('[data-catalog-filter]').forEach(b=>b.classList.toggle('active',b.dataset.catalogFilter===catalogFilter));
  document.querySelectorAll('[data-catalog-study]').forEach(b=>b.addEventListener('click',()=>openWord(b.dataset.catalogStudy,false,true)));
 }
+function quickPracticeCandidates(){
+ // A flashcard practice requires a meaningful translation; don't open grammar or empty table entries.
+ return list.filter(w=>typeKind(w.type)!=='grammar'&&!isTableEntry(w)&&String(w.meaning||'').trim());
+}
+let lastQuickPracticeWordId=null;
+function startQuickPractice(){
+ const pool=quickPracticeCandidates();
+ if(!pool.length){toast('Add a vocabulary word with a translation to start practising.');return}
+ const fresh=pool.filter(w=>w.id!==lastQuickPracticeWordId);
+ const choices=fresh.length?fresh:pool;
+ const word=choices[Math.floor(Math.random()*choices.length)];
+ lastQuickPracticeWordId=word.id;
+ openWord(word.id,false,true);
+}
 function renderHero(){
  const connected=$('sampleflag').textContent==='LIVE · NOTION CONNECTED';
  const due=connected?dueWords().sort((a,b)=>a.next-b.next||a.word.localeCompare(b.word)):[];
+ const overdue=due.filter(w=>dayDiff(w.next)<0).length;
  const next=due[0];
- const summary=$('hero-review-summary');
+ const heading=$('hero-focus-title'),summary=$('hero-review-summary'),preview=$('hero-next'),start=$('start'),practice=$('hero-practice');
+ const canPractice=connected&&quickPracticeCandidates().length>0;
+ practice.disabled=!canPractice;
  if(!connected){
-  summary.textContent='Your next review starts here';
-  $('hero-next-label').textContent='READY WHEN YOU ARE';
-  $('hero-next-word').textContent='Un passo alla volta.';
-  $('hero-next-type').textContent='One word at a time';
+  heading.textContent='Your next study session';
+  summary.textContent='Connect Notion to load your review queue.';
+  start.disabled=false;
+  start.innerHTML='Connect Notion <span aria-hidden="true">↗</span>';
+  preview.hidden=true;
  }else if(!next){
-  summary.textContent='All caught up for now ✦';
-  $('hero-next-label').textContent='ALL CAUGHT UP';
-  $('hero-next-word').textContent='Ben fatto!';
-  $('hero-next-type').textContent='Your Italian is growing';
+  heading.textContent='All caught up for today';
+  summary.textContent=canPractice?'No reviews due. Keep learning with quick practice.':'No reviews due right now.';
+  start.disabled=true;
+  start.innerHTML='No reviews due <span aria-hidden="true">✓</span>';
+  preview.hidden=true;
  }else{
-  summary.textContent=due.length+' '+(due.length===1?'word ready':'words ready')+' to review';
-  $('hero-next-label').textContent='UP NEXT · YOUR REVIEW';
+  heading.textContent=due.length+' '+(due.length===1?'word':'words')+' ready to review';
+  summary.textContent=overdue?overdue+' overdue · Start with the oldest review.':'Your review queue is ready.';
+  start.disabled=false;
+  start.innerHTML='Start review <span aria-hidden="true">↗</span>';
+  preview.hidden=false;
   $('hero-next-word').textContent=next.word;
   const kind=typeKind(next.type);
   $('hero-next-type').textContent=(kind==='verb'?'Verb':kind==='grammar'?'Grammar':isTableEntry(next)?'Table':'Word')+' · Class '+next.klass;
@@ -2188,7 +2212,8 @@ $('import').onclick=()=>activeWorkspace==='monthly'?(monthRootId?loadAvailableMo
  $('add-overlay').onclick=e=>{if(e.target===$('add-overlay'))$('add-overlay').classList.remove('open')};
  $('add-word-form').addEventListener('submit',saveNewWord);
 $('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('remember-connection').checked=rememberConnectionOnDevice;$('forget-notion-connection').hidden=!(notionToken&&sourceId);$('login-error').textContent='';$('login-screen').classList.add('open')};
-$('start').onclick=startReviewSession;
+$('start').onclick=()=>{if($('sampleflag').textContent!=='LIVE · NOTION CONNECTED'){$('login-screen').classList.add('open');return}startReviewSession()};
+$('hero-practice').onclick=startQuickPractice;
 $('translation-quiz-form').addEventListener('submit',checkTranslation);
  $('clear-translation').onclick=()=>{resetTranslationPractice(list.find(w=>w.id===selectedId));$('translation-attempt').focus()};
  $('reveal-translation-answer').onclick=toggleTranslationAnswer;
