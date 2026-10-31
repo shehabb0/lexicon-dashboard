@@ -106,54 +106,32 @@
 .language-soon-label{font-size:8px;letter-spacing:.3px;background:#28344c;border:1px solid #44516d;color:#b8c4da;padding:2px 4px;border-radius:5px;font-weight:780}
 @media(max-width:600px){.topbar-left{gap:9px}.workspace-lang-choice{padding:7px}.language-soon-label{font-size:7px}}
 
-/* A compact, task-first study hub. Replaces the oversized decorative hero. */
-.hero.daily-panel{
- display:flex;flex-direction:column;gap:15px;min-height:0;
- padding:19px 23px 21px;margin-bottom:18px;
- background:radial-gradient(ellipse 450px 200px at 98% 0%,#355c6a27,transparent 78%),linear-gradient(118deg,#152735,#141f32 70%,#1a2239);
- border:1px solid #395465bf;border-radius:17px;box-shadow:0 11px 30px #030b1b42;
-}
-.daily-panel-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.daily-panel-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:9px;font-weight:800;letter-spacing:1.6px;color:#9dc7c6}
-.daily-panel-indicator{width:7px;height:7px;flex:none;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px #7cf4c512}
+/* Study dashboard: two direct actions instead of a decorative banner. */
 .topright .top-connection-status{display:inline-flex;align-items:center;max-width:100%;font-size:9px;letter-spacing:.2px;padding:7px 9px;color:#a5b8ce;background:#19293a;border:1px solid #43576b;border-radius:8px;white-space:nowrap}
 .topright .top-connection-status.is-connected{color:#b8efda;background:#213d37;border-color:#427b6f}
 .topright .refresh-icon-button{display:inline-grid;place-items:center;flex:none;width:39px;height:39px;min-width:39px;padding:0;font-size:22px;line-height:1;border-radius:10px}
-@media(max-width:600px){.topright .top-connection-status{font-size:8px;padding:6px 8px}.topright .refresh-icon-button{width:36px;height:36px;min-width:36px;font-size:20px}}
-.daily-panel-main{display:flex;justify-content:space-between;align-items:center;gap:18px;min-width:0}
-.daily-panel-info{min-width:0;flex:1 1 auto}
-.daily-panel h2{font-size:clamp(18px,1.8vw,23px);font-weight:800;letter-spacing:-.65px;line-height:1.22;color:#eff9ff;margin:0 0 4px}
-.hero.daily-panel .daily-panel-summary{font-size:11px;line-height:1.5;color:#9eb6c7;max-width:none;margin:0}
-.daily-panel-next{display:flex;align-items:center;gap:8px;margin-top:9px;min-width:0;flex-wrap:wrap}
-.daily-panel-next[hidden]{display:none!important}
-.daily-panel-next-label{font-size:9px;font-weight:820;letter-spacing:.65px;color:#78c5ae}
-.daily-panel-next strong{font-size:11px;font-weight:750;color:#e0f7ed;max-width:min(38vw,265px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.daily-panel-next-type{font-size:10px;color:#91a6bb;white-space:nowrap}
-.daily-panel-actions{display:flex;align-items:center;gap:9px;justify-content:flex-end;flex:0 0 auto;flex-wrap:wrap}
-.hero.daily-panel .hero-start{border-radius:10px;padding:11px 16px;font-size:11px;box-shadow:none;white-space:nowrap;min-height:40px}
-.hero.daily-panel .hero-start span{margin-left:10px;font-size:13px;line-height:1}
-.hero.daily-panel .hero-start:hover{transform:none;filter:brightness(1.08);box-shadow:0 7px 18px #7cf4c51d}
-.hero.daily-panel .hero-start:disabled{opacity:.5;cursor:not-allowed;filter:none;box-shadow:none;transform:none}
-.daily-practice-button{display:inline-flex;align-items:center;gap:12px;justify-content:center;min-height:40px;white-space:nowrap;border-radius:10px;padding:10px 13px;background:#1b3140;color:#b8e5df;border:1px solid #416270;font-size:11px;font-weight:780;transition:background .16s,border-color .16s}
-.daily-practice-button:hover{background:#254356;border-color:#6aa999}
-.daily-practice-button:disabled{opacity:.45;cursor:not-allowed}
-.daily-practice-button[hidden]{display:none!important}
-.daily-practice-button span{color:#85cbb2;font-size:13px}
-.daily-practice-button.is-primary{background:linear-gradient(105deg,#80f3c7,#96ecd8);color:#113132;border-color:#b6fff033}
-.daily-practice-button.is-primary span{color:#113132}
-.daily-practice-button.is-primary:hover{filter:brightness(1.08)}
-.hero.daily-panel .hero-start.is-secondary{background:#1b3140;color:#b8e5df;border:1px solid #416270}
-.hero.daily-panel .hero-start.is-secondary:hover{background:#254356;filter:none}
-@media(max-width:920px){.daily-panel-main{align-items:flex-start;flex-wrap:wrap}.daily-panel-actions{justify-content:flex-start}}
+.study-shortcuts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:19px}
+.study-shortcuts .hero-start,.study-shortcuts .daily-practice-button{display:inline-flex;justify-content:center;align-items:center;gap:10px;min-height:42px;padding:11px 17px;font-size:12px;font-weight:800;line-height:1.2;border-radius:10px;white-space:nowrap}
+.study-shortcuts .hero-start{background:linear-gradient(105deg,#80f3c7,#96ecd8);color:#113132;border:1px solid #b6fff033;box-shadow:0 5px 18px #61c5a11d}
+.study-shortcuts .hero-start:hover{filter:brightness(1.08)}
+.study-shortcuts .hero-start span{font-size:14px;line-height:1;margin-left:1px}
+.study-shortcuts .study-action-count{font-size:10px;line-height:1;border-radius:6px;background:#143c3940;padding:5px 7px;min-width:24px;text-align:center}
+.study-shortcuts .daily-practice-button{background:#1b3140;color:#b8e5df;border:1px solid #416270;box-shadow:none}
+.study-shortcuts .daily-practice-button:hover{background:#254356;border-color:#6aa999}
+.study-shortcuts .daily-practice-button span{color:#85cbb2;font-size:13px}
+.study-shortcuts .daily-practice-button.is-primary{background:linear-gradient(105deg,#80f3c7,#96ecd8);color:#113132;border-color:#b6fff033}
+.study-shortcuts .daily-practice-button.is-primary span{color:#113132}
+.study-shortcuts .daily-practice-button.is-primary:hover{filter:brightness(1.08)}
+.study-shortcuts .hero-start.is-secondary{background:#1b3140;color:#b8e5df;border:1px solid #416270;box-shadow:none}
+.study-shortcuts .hero-start.is-secondary:hover{background:#254356;filter:none}
+.study-shortcuts button[hidden]{display:none!important}
 @media(max-width:600px){
- .hero.daily-panel{padding:17px;gap:13px}
- .daily-panel-main{gap:12px}
- .daily-panel h2{font-size:20px}
- .daily-panel-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
- .hero.daily-panel .hero-start,.daily-practice-button{width:100%;padding:10px 9px;min-width:0}
- .daily-panel-next strong{max-width:min(62vw,235px)}
+ .topright .top-connection-status{font-size:8px;padding:6px 8px}
+ .topright .refresh-icon-button{width:36px;height:36px;min-width:36px;font-size:20px}
+ .study-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:17px}
+ .study-shortcuts .hero-start,.study-shortcuts .daily-practice-button{width:100%;min-width:0;padding:11px 8px;font-size:11px}
 }
-@media(max-width:370px){.daily-panel-actions{grid-template-columns:1fr}}
+@media(max-width:370px){.study-shortcuts{grid-template-columns:1fr}}
 
 /* Compact grammar translation drills, independent of vocabulary Table practice. */
 .grammar-modal.grammar-compact-practice{width:min(100%,680px);padding:23px 25px}
@@ -208,24 +186,12 @@
   <div class="sidebar-foot"><div class="mini-card"><span style="color:var(--mint);font-size:10px;font-weight:850;letter-spacing:1px">YOUR JOURNEY ✦</span><strong style="display:block;margin-top:7px">One word at a time.</strong><p>Consistency turns new words into a second language.</p><div class="track"><div class="fill" id="side-progress"></div></div></div><div class="sidebar-bottom">✦ Designed for curious minds</div></div>
 </aside>
 <main class="main" id="overview">
- <header class="topbar"><div class="topbar-left"><div class="language-workspace-switch" role="group" aria-label="Choose study language"><button type="button" class="workspace-lang-choice active" data-workspace-language="Italian" aria-pressed="true" title="Italian workspace"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="Italian flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#009246"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ce2b37"/></svg><span>Italian</span></button><button type="button" class="workspace-lang-choice soon" data-workspace-language="French" aria-pressed="false" title="French workspace coming soon"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="French flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#0055a4"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ef4135"/></svg><span>French</span><span class="language-soon-label">Soon</span></button></div><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn reverse-switch" type="button" id="reverse-mode" aria-pressed="false" title="Show the translation first and type the original word">⇄ Reverse: OFF</button><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <span class="sample top-connection-status" id="sampleflag" role="status" aria-live="polite">NOT CONNECTED</span> <button class="import-btn refresh-icon-button" id="import" type="button" title="Refresh Notion" aria-label="Refresh Notion">↻</button></div></header>
+ <header class="topbar"><div class="topbar-left"><div class="language-workspace-switch" role="group" aria-label="Choose study language"><button type="button" class="workspace-lang-choice active" data-workspace-language="Italian" aria-pressed="true" title="Italian workspace"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="Italian flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#009246"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ce2b37"/></svg><span>Italian</span></button><button type="button" class="workspace-lang-choice soon" data-workspace-language="French" aria-pressed="false" title="French workspace coming soon"><svg class="lang-flag" viewBox="0 0 24 16" role="img" aria-label="French flag" xmlns="http://www.w3.org/2000/svg"><rect width="8" height="16" fill="#0055a4"/><rect x="8" width="8" height="16" fill="#ffffff"/><rect x="16" width="8" height="16" fill="#ef4135"/></svg><span>French</span><span class="language-soon-label">Soon</span></button></div><div class="crumb"><span>Workspace</span><span style="opacity:.45">/</span><strong id="workspace-breadcrumb">Overview</strong></div></div><div class="topright"><span class="datepill"><span class="dot"></span><span id="date-label">Today</span></span><button class="import-btn reverse-switch" type="button" id="reverse-mode" aria-pressed="false" title="Show the translation first and type the original word">⇄ Reverse: OFF</button><button class="new-word-button" id="add-word">＋ Add Word</button> <button class="import-btn" id="settings" title="Edit Notion connection">⚙ Connect</button> <button class="import-btn refresh-icon-button" id="import" type="button" title="Refresh Notion" aria-label="Refresh Notion">↻</button> <span class="sample top-connection-status" id="sampleflag" role="status" aria-live="polite">NOT CONNECTED</span></div></header>
  <div id="vocabulary-workspace">
- <section class="hero daily-panel" aria-label="Today's Italian study">
-   <div class="daily-panel-top">
-     <span class="daily-panel-eyebrow"><span class="daily-panel-indicator" aria-hidden="true"></span> TODAY'S STUDY</span>
-   </div>
-   <div class="daily-panel-main">
-     <div class="daily-panel-info">
-       <h2 id="hero-focus-title">Your next study session</h2>
-       <p class="daily-panel-summary" id="hero-review-summary" role="status" aria-live="polite">Connect Notion to see what's ready.</p>
-       <div class="daily-panel-next" id="hero-next" hidden><span class="daily-panel-next-label">UP NEXT</span><strong id="hero-next-word">—</strong><span class="daily-panel-next-type" id="hero-next-type"></span></div>
-     </div>
-     <div class="daily-panel-actions">
-       <button type="button" class="primary hero-start" id="start">Start review <span aria-hidden="true">↗</span></button>
-       <button type="button" class="daily-practice-button" id="hero-practice">✎ Quick practice <span aria-hidden="true">↗</span></button>
-     </div>
-   </div>
- </section>
+ <nav class="study-shortcuts" aria-label="Study actions">
+   <button type="button" class="primary hero-start" id="start">Start review <span aria-hidden="true">↗</span></button>
+   <button type="button" class="daily-practice-button" id="hero-practice" hidden>✎ Quick practice <span aria-hidden="true">↗</span></button>
+ </nav>
  <section class="metrics" aria-label="Vocabulary statistics">
   <article class="metric"><div class="metric-top"><span>Total vocabulary</span><span class="metric-icon"><svg><use href="#i-book"/></svg></span></div><div class="metric-num" id="total">0</div></article>
   <article class="metric"><div class="metric-top"><span>Words mastered</span><span class="metric-icon"><svg><use href="#i-award"/></svg></span></div><div class="metric-num" id="mastered">0</div></article>
@@ -620,37 +586,20 @@ function startQuickPractice(){
  openWord(word.id,false,true);
 }
 function renderHero(){
- const connected=$('sampleflag').textContent==='LIVE · NOTION CONNECTED';
- const due=connected?dueWords().sort((a,b)=>a.next-b.next||a.word.localeCompare(b.word)):[];
- const overdue=due.filter(w=>dayDiff(w.next)<0).length;
- const next=due[0];
- const heading=$('hero-focus-title'),summary=$('hero-review-summary'),preview=$('hero-next'),start=$('start'),practice=$('hero-practice');
+ const connected=$('sampleflag').textContent==='NOTION CONNECTED';
+ const dueCount=connected?dueWords().length:0;
+ const start=$('start'),practice=$('hero-practice');
  const canPractice=connected&&quickPracticeCandidates().length>0;
  practice.disabled=!canPractice;
  practice.hidden=!canPractice;
- practice.classList.toggle('is-primary',connected&&!next&&canPractice);
- start.classList.toggle('is-secondary',connected&&!next&&canPractice);
+ practice.classList.toggle('is-primary',connected&&dueCount===0&&canPractice);
+ start.classList.toggle('is-secondary',connected&&dueCount===0&&canPractice);
  if(!connected){
-  heading.textContent='Your next study session';
-  summary.textContent='Connect Notion to load your review queue.';
-  start.disabled=false;
   start.innerHTML='Connect Notion <span aria-hidden="true">↗</span>';
-  preview.hidden=true;
- }else if(!next){
-  heading.textContent='All caught up for today';
-  summary.textContent=canPractice?'No reviews due. Keep learning with quick practice.':'No reviews due right now.';
-  start.disabled=false;
+ }else if(!dueCount){
   start.innerHTML='Browse vocabulary <span aria-hidden="true">↗</span>';
-  preview.hidden=true;
  }else{
-  heading.textContent=due.length+' '+(due.length===1?'word':'words')+' ready to review';
-  summary.textContent=overdue?overdue+' overdue · Start with the oldest review.':'Your review queue is ready.';
-  start.disabled=false;
-  start.innerHTML='Start review <span aria-hidden="true">↗</span>';
-  preview.hidden=false;
-  $('hero-next-word').textContent=next.word;
-  const kind=typeKind(next.type);
-  $('hero-next-type').textContent=(kind==='verb'?'Verb':kind==='grammar'?'Grammar':isTableEntry(next)?'Table':'Word')+' · Class '+next.klass;
+  start.innerHTML='Start review <span class="study-action-count" aria-label="'+dueCount+' words due">'+dueCount+'</span>';
  }
 }
 function render(){const total=list.length,master=list.filter(w=>w.mastered||w.difficulty==='Learned').length,due=dueWords().length,late=activeWords().filter(w=>w.next&&dayDiff(w.next)<0).length,pct=total?Math.round(master/total*100):0;
@@ -1842,7 +1791,7 @@ async function loadWords(silent=false){
   // Ignore a response from an older connection after credentials changed or were forgotten.
   if(requestedToken!==notionToken||requestedSource!==sourceId)return false;
   list=words.map(w=>({...w,next:parseDate(w.next)}));
-  $('sampleflag').textContent='LIVE · NOTION CONNECTED';
+  $('sampleflag').textContent='NOTION CONNECTED';
   $('sampleflag').classList.add('is-connected');
   $('login-screen').classList.remove('open');
   $('login-error').textContent='';
@@ -2225,7 +2174,7 @@ $('import').onclick=()=>activeWorkspace==='monthly'?(monthRootId?loadAvailableMo
  $('add-word-form').addEventListener('submit',saveNewWord);
 $('settings').onclick=()=>{$('notion-source').value=sourceId;$('notion-token').value=notionToken;$('remember-connection').checked=rememberConnectionOnDevice;$('forget-notion-connection').hidden=!(notionToken&&sourceId);$('login-error').textContent='';$('login-screen').classList.add('open')};
 $('start').onclick=()=>{
- if($('sampleflag').textContent!=='LIVE · NOTION CONNECTED'){$('login-screen').classList.add('open');return}
+ if($('sampleflag').textContent!=='NOTION CONNECTED'){$('login-screen').classList.add('open');return}
  if(dueWords().length)startReviewSession();
  else showWorkspace('catalog','catalog');
 };
