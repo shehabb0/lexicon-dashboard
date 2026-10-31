@@ -161,8 +161,8 @@
 .streak-metric.at-risk{border-color:#ffbd6890;box-shadow:0 0 0 1px #ffbd6826,0 7px 23px #e68c2610}
 .streak-risk{position:relative;margin-top:11px;padding:9px 10px 10px;border:1px solid #e6a35664;border-radius:10px;background:#b76f261c;color:#ffce8d;line-height:1.4}
 .streak-risk[hidden]{display:none!important}
-.streak-risk-heading{display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;font-size:10px;font-weight:800;letter-spacing:.1px}
-.streak-risk-clock{font-size:9px;font-weight:780;color:#ffe1ac;white-space:nowrap}
+.streak-risk-heading{display:block;font-size:10px;font-weight:800;letter-spacing:.1px}
+.streak-risk-clock{font-size:inherit;font-weight:800;color:#ffe1ac;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -221,7 +221,7 @@
   <article class="metric"><div class="metric-top"><span>Words mastered</span><span class="metric-icon"><svg><use href="#i-award"/></svg></span></div><div class="metric-num" id="mastered">0</div></article>
   <article class="metric"><div class="metric-top"><span>Ready to review</span><span class="metric-icon"><svg><use href="#i-clock"/></svg></span></div><div class="metric-num" id="due">0</div></article>
   <article class="metric"><div class="metric-top"><span>Overdue words</span><span class="metric-icon"><svg><use href="#i-fire"/></svg></span></div><div class="metric-num" id="overdue">0</div></article>
-   <article class="metric streak-metric" id="streak-card" aria-live="polite"><div class="metric-top"><span>Study streak</span><span class="metric-icon streak-fire" aria-label="Fire">🔥</span></div><div class="metric-num streak-count"><span id="streak-days">—</span><span class="streak-unit" id="streak-unit">days</span></div><div class="streak-risk" id="streak-risk" hidden><div class="streak-risk-heading"><span>⚠ Streak at risk</span><span class="streak-risk-clock" id="streak-risk-clock" aria-live="off"></span></div></div></article>
+   <article class="metric streak-metric" id="streak-card" aria-live="polite"><div class="metric-top"><span>Study streak</span><span class="metric-icon streak-fire" aria-label="Fire">🔥</span></div><div class="metric-num streak-count"><span id="streak-days">—</span><span class="streak-unit" id="streak-unit">days</span></div><div class="streak-risk" id="streak-risk" hidden><div class="streak-risk-heading">⚠ Streak at risk: <span class="streak-risk-clock" id="streak-risk-clock" aria-live="off"></span></div></div></article>
  </section>
  <section class="insights" id="analytics">
   <article class="panel"><div class="panel-head"><div><h2>Learning activity</h2><div class="subtitle" id="activity-sub">A snapshot of your study rhythm</div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="chip" id="activity-range">Last 7 days</div><button class="track-cta" id="enable-history">＋ Enable history</button></div></div><div class="chart" id="activity-chart"></div><div class="xaxis" id="activity-days"></div><div class="chartfooter"><span><span class="legend-bullet" style="background:var(--mint)"></span>Lexicon review &amp; practice actions</span><span style="margin-left:auto" id="activity-total"></span></div><p class="track-help" id="track-help">Enable tracking to record reviews in Notion.</p></article>
