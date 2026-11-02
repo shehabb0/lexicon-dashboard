@@ -126,6 +126,34 @@
 .language-chip .lang-flag{margin-right:4px}
 .lang-fallback-icon{display:inline-block;vertical-align:baseline}
 
+
+/* Monthly Notion vocabulary creation chart, scoped to the vocabulary library. */
+.catalog-growth{border:1px solid #3f4c77;background:linear-gradient(145deg,#151f35,#121b2d);border-radius:18px;padding:19px 22px 15px;margin-bottom:18px;min-width:0}
+.catalog-growth-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.catalog-growth-head h2{font-size:15px;letter-spacing:-.25px;font-weight:790;margin:0;color:#ecedff}
+.catalog-growth-head p{color:#91a4c4;font-size:10px;margin:3px 0 0}
+.catalog-growth-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.catalog-growth-year-total{color:#b9b2f7;font-size:11px;font-weight:750}
+.catalog-growth-select-label{font-size:10px;color:#9eabc7}
+.catalog-growth-tools select{border:1px solid #566088;background:#202945;color:#e9e5ff;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:750}
+.catalog-growth-chart{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:7px;align-items:stretch;min-width:0}
+.catalog-growth-month{appearance:none;min-width:0;border:1px solid transparent;background:transparent;border-radius:10px;padding:5px 3px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:background .16s,border-color .16s,transform .16s}
+.catalog-growth-month:hover{background:#7b71c21a;border-color:#9a8df044;transform:translateY(-2px)}
+.catalog-growth-month.selected{background:#8072d223;border-color:#9c90ff66}
+.catalog-growth-count{font-size:10px;font-weight:770;color:#b0bcd6;font-variant-numeric:tabular-nums;line-height:1.3}
+.catalog-growth-month.selected .catalog-growth-count{color:#e4dbff}
+.catalog-growth-plot{height:102px;width:100%;display:flex;justify-content:center;align-items:flex-end;border-bottom:1px solid #43506b66}
+.catalog-growth-bar{width:min(100%,30px);height:var(--growth-height);min-height:3px;display:block;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,#9891e9,#635d9f);transition:height .22s,background .16s;box-shadow:inset 0 1px #ffffff26}
+.catalog-growth-month.selected .catalog-growth-bar{background:linear-gradient(180deg,#b3a4ff,#8274d5)}
+.catalog-growth-month-label{font-size:10px;color:#95a6c3;font-weight:700;white-space:nowrap}
+.catalog-growth-month.selected .catalog-growth-month-label{color:#e1dcff}
+.catalog-growth-footer{min-height:28px;padding-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:10px;color:#a8b4cf}
+#catalog-growth-detail{color:#d9d1ff;font-weight:700;overflow-wrap:anywhere}
+#catalog-growth-caveat{color:#7084a3}
+.catalog-growth-empty{grid-column:1/-1;color:#889bb9;font-size:11px;text-align:center;padding:45px 8px}
+@media(max-width:620px){.catalog-growth{padding:16px 11px 12px}.catalog-growth-head{padding:0 4px}.catalog-growth-chart{gap:2px}.catalog-growth-month{padding:5px 1px;gap:4px}.catalog-growth-plot{height:86px}.catalog-growth-count{font-size:9px}.catalog-growth-month-label{font-size:8px}.catalog-growth-bar{width:min(100%,23px)}.catalog-growth-footer{padding:10px 4px 0}}
+@media(prefers-reduced-motion:reduce){.catalog-growth-month,.catalog-growth-bar{transition:none}.catalog-growth-month:hover{transform:none}}
+
 /* Top-level study-language switch: Italian active, French awaits its own workspace. */
 .topbar{flex-wrap:wrap;row-gap:11px}
 .topbar-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
@@ -248,9 +276,21 @@
  </div>
  <section id="catalog-workspace" class="catalog-workspace" aria-label="Vocabulary library" hidden>
   <div class="catalog-hero">
-   <div><div class="section-eyebrow">YOUR COMPLETE NOTION LIBRARY ✦</div><h1>Vocabulary <em>library.</em></h1><p>Every word in one place—words, verbs, and grammar. Browse, recall, and practise whenever you like, without changing your review schedule.</p></div>
+   <div><div class="section-eyebrow">YOUR COMPLETE NOTION LIBRARY ✦</div><h1>Vocabulary <em>library.</em></h1></div>
    <div class="catalog-count"><strong id="catalog-total-count">0</strong><span>TOTAL ENTRIES</span></div>
   </div>
+  <section class="catalog-growth" aria-labelledby="catalog-growth-title">
+   <div class="catalog-growth-head">
+    <div><h2 id="catalog-growth-title">Vocabulary growth</h2><p>New entries added to Notion each month</p></div>
+    <div class="catalog-growth-tools">
+     <span class="catalog-growth-year-total" id="catalog-growth-year-total"></span>
+     <label class="catalog-growth-select-label" for="catalog-growth-year">Year</label>
+     <select id="catalog-growth-year" aria-label="Vocabulary creation year"></select>
+    </div>
+   </div>
+   <div id="catalog-growth-chart" class="catalog-growth-chart" role="group" aria-label="Vocabulary additions by month"></div>
+   <div class="catalog-growth-footer"><span id="catalog-growth-detail" role="status" aria-live="polite"></span><span id="catalog-growth-caveat"></span></div>
+  </section>
   <div class="catalog-content">
    <div class="catalog-head">
     <div><h2 id="catalog-heading">All vocabulary</h2><p id="catalog-study-hint">Choose a word to reveal its translation in a flashcard or practise its conjugation, grammar or table. Browsing here never changes your review progress.</p></div>
@@ -467,6 +507,7 @@ let list=[],search='',selectedId=null,imported=true,queueLimit=24;
 const LANGUAGE_WORKSPACES={Italian:{ready:true},French:{ready:false}};
 let activeLanguageWorkspace='Italian';
 let catalogFilter='all',catalogSearch='',catalogLimit=60,studyOnly=false;
+let catalogGrowthYear=null,catalogGrowthMonth=null;
 let reviewSession=null,reviewActionBusy=false;
 let reviewHistorySaveQueue=Promise.resolve();
 let historySyncPromise=Promise.resolve();
@@ -584,7 +625,52 @@ function filteredCatalog(){
  if(q)matches=matches.filter(w=>(w.word+' '+w.meaning+' '+w.type+' '+(w.tableCategory||'')+' '+w.lang).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(q));
  return [...matches].sort((a,b)=>a.word.localeCompare(b.word,undefined,{sensitivity:'base'})||a.lang.localeCompare(b.lang));
 }
+const VOCAB_MONTHS=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const VOCAB_MONTHS_FULL=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+function vocabularyCreationDates(){
+ return list.map(w=>({word:w,created:w.createdTime?new Date(w.createdTime):null}))
+  .filter(item=>item.created&&!Number.isNaN(item.created.getTime()));
+}
+function renderVocabularyGrowth(){
+ const dated=vocabularyCreationDates();
+ const unknown=list.length-dated.length;
+ const years=[...new Set(dated.map(item=>item.created.getFullYear()))].sort((a,b)=>b-a);
+ const picker=$('catalog-growth-year'),plot=$('catalog-growth-chart');
+ $('catalog-growth-caveat').textContent=unknown?unknown+' '+(unknown===1?'entry has':'entries have')+' no creation date':'Creation dates from Notion';
+ if(!years.length){
+  picker.innerHTML='<option value="">—</option>';picker.disabled=true;
+  $('catalog-growth-year-total').textContent='';
+  plot.innerHTML='<div class="catalog-growth-empty">No creation dates available yet.</div>';
+  $('catalog-growth-detail').textContent=list.length?'Creation dates are unavailable for these entries.':'Add vocabulary in Notion to see monthly growth.';
+  return;
+ }
+ picker.disabled=false;
+ if(!years.includes(catalogGrowthYear))catalogGrowthYear=years.includes(new Date().getFullYear())?new Date().getFullYear():years[0];
+ picker.innerHTML=years.map(year=>'<option value="'+year+'">'+year+'</option>').join('');
+ picker.value=String(catalogGrowthYear);
+ const months=Array.from({length:12},()=>[]);
+ for(const item of dated){
+  if(item.created.getFullYear()===catalogGrowthYear)months[item.created.getMonth()].push(item.word);
+ }
+ const counts=months.map(items=>items.length),max=Math.max(1,...counts),total=counts.reduce((a,b)=>a+b,0);
+ const currentYear=new Date().getFullYear();
+ if(catalogGrowthMonth===null||catalogGrowthMonth<0||catalogGrowthMonth>11)
+  catalogGrowthMonth=catalogGrowthYear===currentYear?new Date().getMonth():Math.max(0,counts.lastIndexOf(Math.max(...counts)));
+ $('catalog-growth-year-total').textContent=total.toLocaleString()+' added in '+catalogGrowthYear;
+ plot.innerHTML=counts.map((count,month)=>{
+  const active=month===catalogGrowthMonth;
+  const height=count?Math.max(8,Math.round(count/max*100)):3;
+  const title=VOCAB_MONTHS_FULL[month]+' '+catalogGrowthYear+': '+count+' '+(count===1?'entry':'entries')+' added';
+  return '<button type="button" class="catalog-growth-month'+(active?' selected':'')+'" data-growth-month="'+month+'" title="'+title+'" aria-label="'+title+'" aria-pressed="'+active+'">'
+   +'<span class="catalog-growth-count">'+count+'</span><span class="catalog-growth-plot"><span class="catalog-growth-bar" style="--growth-height:'+height+'%"></span></span><span class="catalog-growth-month-label">'+VOCAB_MONTHS[month]+'</span></button>';
+ }).join('');
+ const selected=months[catalogGrowthMonth];
+ const newest=selected.slice().sort((a,b)=>new Date(b.createdTime)-new Date(a.createdTime)).slice(0,3);
+ $('catalog-growth-detail').textContent=VOCAB_MONTHS_FULL[catalogGrowthMonth]+' '+catalogGrowthYear+' · '+selected.length+' '+(selected.length===1?'entry':'entries')+' added'
+  +(newest.length?' · '+newest.map(w=>w.word).join(', ')+(selected.length>3?'…':''):'');
+}
 function renderCatalog(){
+ renderVocabularyGrowth();
  const all=filteredCatalog(),shown=all.slice(0,catalogLimit);
  $('catalog-total-count').textContent=list.length.toLocaleString();
  $('catalog-heading').textContent=({mastered:'Mastered vocabulary',words:'Words',verbs:'Verbs',grammar:'Grammar',all:'All vocabulary'})[catalogFilter]||'All vocabulary';
@@ -1010,7 +1096,7 @@ function mapPage(page){
  const tableCategory=propertyText(propByCandidates(p,['Category','Categories','Categoria','Study Format','Format']));
  const klass=Number(propertyText(p.Class))||1;
  return {id:page.id,word,meaning,type,tableCategory,lang:propertyText(propByCandidates(p,['Language','Lang','Languages','Lingua','Langue','Idioma'])).trim()||'Italian',
-  klass:Math.max(1,Math.min(10,klass)),next:propertyText(p['Next Review'])||null,
+  klass:Math.max(1,Math.min(10,klass)),next:propertyText(p['Next Review'])||null,createdTime:page.created_time||null,
   difficulty,mastered:difficulty==='Learned',approvedReviews:Number(p['Approved Reviews']?.number||0),
   example:propertyText(propByCandidates(p,['Example','Example Sentence','Sentence'])),url:page.url||''};
 }
@@ -2311,6 +2397,17 @@ $('forgot').onclick=()=>act('forgot');$('remembered').onclick=()=>act('remember'
 $('queue-more').onclick=()=>{queueLimit+=30;render()};
  document.querySelectorAll('[data-workspace-language]').forEach(button=>button.onclick=()=>chooseLanguageWorkspace(button.dataset.workspaceLanguage));
  $('catalog-more').onclick=()=>{catalogLimit+=60;renderCatalog()};
+$('catalog-growth-year').onchange=e=>{
+ catalogGrowthYear=Number(e.target.value);
+ catalogGrowthMonth=null;
+ renderVocabularyGrowth();
+};
+$('catalog-growth-chart').onclick=e=>{
+ const bar=e.target.closest('[data-growth-month]');
+ if(!bar)return;
+ catalogGrowthMonth=Number(bar.dataset.growthMonth);
+ renderVocabularyGrowth();
+};
  $('catalog-search').oninput=e=>{catalogSearch=e.target.value.toLowerCase().trim();catalogLimit=60;renderCatalog()};
  document.querySelectorAll('[data-catalog-filter]').forEach(b=>b.onclick=()=>{catalogFilter=b.dataset.catalogFilter;catalogLimit=60;renderCatalog()});
  $('search').oninput=e=>{search=e.target.value.toLowerCase().trim();queueLimit=24;render()};
