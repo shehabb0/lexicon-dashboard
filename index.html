@@ -1783,8 +1783,27 @@ function gradeGrammarTranslation(typed,expected){
  const result=evaluateAnswer(typed,expected,'translation');
  return result.state;
 }
+// In possessive-adjective paradigms, articles and separators are optional.
+// All forms still have to be supplied in their original order.
+const ITALIAN_POSSESSIVES=new Set('mio mia miei mie tuo tua tuoi tue suo sua suoi sue nostro nostra nostri nostre vostro vostra vostri vostre loro proprio propria propri proprie altrui'.split(' '));
+const ITALIAN_POSSESSIVE_ARTICLES=new Set(['il','lo','la','i','gli','le']);
+function barePossessiveForms(value){
+ const tokens=grammarComparable(value).split(/\s+/).filter(Boolean),forms=[];
+ for(let i=0;i<tokens.length;i++){
+  const token=tokens[i];
+  if(ITALIAN_POSSESSIVE_ARTICLES.has(token)&&ITALIAN_POSSESSIVES.has(tokens[i+1]))continue;
+  if(!ITALIAN_POSSESSIVES.has(token))return null;
+  forms.push(token);
+ }
+ return forms.length?forms:null;
+}
 function gradeGrammarValue(typed,expected){
  const answer=grammarComparable(typed),ref=grammarComparable(expected);
+ const referenceForms=barePossessiveForms(expected);
+ if(referenceForms&&referenceForms.length>=2&&/[\/|;,\n]/.test(expected)){
+  const typedForms=barePossessiveForms(typed);
+  return typedForms&&typedForms.length===referenceForms.length&&typedForms.every((part,i)=>part===referenceForms[i])?'correct':answer?'wrong':'blank';
+ }
  if(!answer)return 'blank';
  if(answer===ref)return 'correct';
  if(withoutAccents(answer)===withoutAccents(ref))return 'close';
