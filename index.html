@@ -1807,7 +1807,7 @@ function renderGrammarQuestions(){
   const shown=articleExercise
    ?'<p class="grammar-prompt grammar-pair-prompt">'+esc(articleExercise.singular)+'</p>'
    :paired?'<p class="grammar-prompt grammar-pair-prompt">'+esc(String(cells[source]||''))+'</p>'
-   :cells.map((value,i)=>({value,i})).filter(c=>c.i!==target&&String(c.value||'').trim()).map(c=>'<p class="grammar-prompt"><strong>'+esc(String(header[c.i]||'Column '+(i+1)))+':</strong> '+esc(c.value)+'</p>').join('');
+   :cells.map((value,i)=>({value,i})).filter(c=>c.i!==target&&String(c.value||'').trim()).map(c=>'<p class="grammar-prompt"><strong>'+esc(String(header[c.i]||'Column '+(c.i+1)))+':</strong> '+esc(c.value)+'</p>').join('');
   const destination=articleExercise?'Plurale':paired?(target===pair.italian?'Italian':'French'):String(header[target]||'Your answer');
   const answer='<label for="grammar-answer-'+index+'">'+(articleExercise?'Write the plural':'Write in '+esc(destination))+'</label><input id="grammar-answer-'+index+'" class="practice-answer grammar-answer" type="text" spellcheck="false" autocomplete="off" data-row="'+index+'" placeholder="'+(articleExercise?'Plural form…':'Your '+esc(destination)+' answer…')+'" maxlength="2000"/><div class="grammar-feedback" id="grammar-feedback-'+index+'" aria-live="polite"></div>';
   const questionTitle=articleExercise?(articleExercise.example?'ESEMPIO ':'ARTICOLO '):'EXERCISE ';
