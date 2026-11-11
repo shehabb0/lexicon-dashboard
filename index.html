@@ -1708,9 +1708,37 @@ function grammarPairColumns(table){
  const french=headers.findIndex(h=>/francais|francese|french/.test(h));
  return italian>=0&&french>=0&&italian!==french?{italian,french}:null;
 }
+/* Articoli Determinativi has multiple singular → plural pairs in each Notion cell.
+   Turn each pair into its own question, and remove articles from noun examples. */
+function articoliDeterminativiExercises(table){
+ const word=list.find(w=>w.id===grammarWordId);
+ if(typeKind(word?.type)!=='grammar'||withoutAccents(normalizeAnswer(word?.word))!=='articoli determinativi')return null;
+ if(!table?.header||!table.rows?.length)return null;
+ const headers=table.rows[0].map(value=>withoutAccents(normalizeAnswer(value)));
+ const articleCol=headers.findIndex(label=>label.includes('singolare')&&label.includes('plurale'));
+ const exampleCol=headers.findIndex(label=>label.includes('esempio'));
+ if(articleCol<0&&exampleCol<0)return null;
+ const stripExampleArticle=value=>String(value).trim().replace(/^(?:(?:il|lo|la|i|gli|le)\s+|l['’]\s*)/i,'').trim();
+ const exercises=[];
+ for(const {col,example} of [{col:articleCol,example:false},{col:exampleCol,example:true}]){
+  if(col<0)continue;
+  for(const cells of table.rows.slice(1)){
+   for(const line of String(cells[col]||'').split(/\r?\n|<br\s*\/?>/i)){
+    const parts=line.trim().split(/\s*(?:→|⇒|➜|⟶|->|=>)\s*/);
+    if(parts.length!==2)continue;
+    let [singular,plural]=parts.map(value=>value.replace(/<[^>]+>/g,'').trim());
+    if(example){singular=stripExampleArticle(singular);plural=stripExampleArticle(plural)}
+    if(singular&&plural)exercises.push({singular,plural,example});
+   }
+  }
+ }
+ return exercises.length?exercises:null;
+}
 function grammarActiveRows(){
  const table=grammarLesson?.tables[Number($('grammar-table-select').value)];
  if(!table)return [];
+ const articleExercises=articoliDeterminativiExercises(table);
+ if(articleExercises)return articleExercises.map((articleExercise,index)=>({cells:[],index,articleExercise}));
  const target=Number($('grammar-column-select').value);
  const pair=grammarPairColumns(table);
  const source=pair?(target===pair.italian?pair.french:pair.italian):null;
@@ -1733,6 +1761,12 @@ function renderGrammarColumnOptions(){
  const header=table.header?table.rows[0]:[];
  const word=list.find(w=>w.id===grammarWordId);
  const pair=word&&typeKind(word.type)==='grammar'?grammarPairColumns(table):null;
+ if(articoliDeterminativiExercises(table)){
+  const option=document.createElement('option');
+  option.value='1';option.textContent='Singolare → Plurale';
+  picker.appendChild(option);picker.value='1';
+  renderGrammarQuestions();return;
+ }
  for(let col=0;col<width;col++){
   if(pair&&col!==pair.italian&&col!==pair.french)continue;
   if(!table.rows.slice(table.header?1:0).some(row=>String(row[col]||'').trim()))continue;
@@ -1757,23 +1791,27 @@ function renderGrammarQuestions(){
  const word=list.find(w=>w.id===grammarWordId);
  const isGrammar=word&&typeKind(word.type)==='grammar';
  const paired=!!(isGrammar&&pair);
+ const articleExercises=articoliDeterminativiExercises(table);
  const source=paired?(target===pair.italian?pair.french:pair.italian):null;
  const header=table.header?table.rows[0]:[];
  const questions=grammarActiveRows();
  $('grammar-modal').classList.toggle('grammar-compact-practice',!!isGrammar);
- $('grammar-table-instructions').textContent=paired
-  ?(target===pair.italian?'Read the French preposition and write its Italian equivalent.':'Read the Italian preposition and write its French equivalent.')
+ $('grammar-table-instructions').textContent=articleExercises
+  ?'Write the plural for each singular article or noun. The answer stays hidden until you check.'
+  :paired?(target===pair.italian?'Read the French preposition and write its Italian equivalent.':'Read the Italian preposition and write its French equivalent.')
   :'Write the missing answer for each prompt.';
- $('grammar-direction-wrap').querySelector('label').textContent=paired?'Translate from':'Which column to practise?';
+ $('grammar-direction-wrap').querySelector('label').textContent=articleExercises?'Practice direction':paired?'Translate from':'Which column to practise?';
  $('grammar-page-status').textContent=questions.length?questions.length+' '+(questions.length===1?'question':'questions')+' · all on this page':'';
  if(!questions.length){area.innerHTML='<p class="conjugation-hint">No answers were found for this direction.</p>';return}
- area.innerHTML=questions.map(({cells,index},questionNumber)=>{
-  const shown=paired
-   ?'<p class="grammar-prompt grammar-pair-prompt">'+esc(String(cells[source]||''))+'</p>'
-   :cells.map((value,i)=>({value,i})).filter(c=>c.i!==target&&String(c.value||'').trim()).map(c=>'<p class="grammar-prompt"><strong>'+esc(String(header[c.i]||'Column '+(c.i+1)))+':</strong> '+esc(c.value)+'</p>').join('');
-  const destination=paired?(target===pair.italian?'Italian':'French'):String(header[target]||'Your answer');
-  const answer='<label for="grammar-answer-'+index+'">Write in '+esc(destination)+'</label><input id="grammar-answer-'+index+'" class="practice-answer grammar-answer" type="text" spellcheck="false" autocomplete="off" data-row="'+index+'" placeholder="Your '+esc(destination)+' answer…" maxlength="2000"/><div class="grammar-feedback" id="grammar-feedback-'+index+'" aria-live="polite"></div>';
-  return '<div class="grammar-question" data-row="'+index+'"><div class="grammar-question-title">EXERCISE '+(questionNumber+1)+'</div><div class="table-practice-row"><div class="table-practice-clues">'+shown+'</div><div class="table-practice-response">'+answer+'</div></div></div>';
+ area.innerHTML=questions.map(({cells,index,articleExercise},questionNumber)=>{
+  const shown=articleExercise
+   ?'<p class="grammar-prompt grammar-pair-prompt">'+esc(articleExercise.singular)+'</p>'
+   :paired?'<p class="grammar-prompt grammar-pair-prompt">'+esc(String(cells[source]||''))+'</p>'
+   :cells.map((value,i)=>({value,i})).filter(c=>c.i!==target&&String(c.value||'').trim()).map(c=>'<p class="grammar-prompt"><strong>'+esc(String(header[c.i]||'Column '+(i+1)))+':</strong> '+esc(c.value)+'</p>').join('');
+  const destination=articleExercise?'Plurale':paired?(target===pair.italian?'Italian':'French'):String(header[target]||'Your answer');
+  const answer='<label for="grammar-answer-'+index+'">'+(articleExercise?'Write the plural':'Write in '+esc(destination))+'</label><input id="grammar-answer-'+index+'" class="practice-answer grammar-answer" type="text" spellcheck="false" autocomplete="off" data-row="'+index+'" placeholder="'+(articleExercise?'Plural form…':'Your '+esc(destination)+' answer…')+'" maxlength="2000"/><div class="grammar-feedback" id="grammar-feedback-'+index+'" aria-live="polite"></div>';
+  const questionTitle=articleExercise?(articleExercise.example?'ESEMPIO ':'ARTICOLO '):'EXERCISE ';
+  return '<div class="grammar-question" data-row="'+index+'"><div class="grammar-question-title">'+questionTitle+(questionNumber+1)+'</div><div class="table-practice-row"><div class="table-practice-clues">'+shown+'</div><div class="table-practice-response">'+answer+'</div></div></div>';
  }).join('');
 }
 function grammarComparable(value){
@@ -1817,6 +1855,8 @@ function resetGrammarReveal(){
 }
 function grammarAnswerFor(index){
  const table=grammarLesson?.tables[Number($('grammar-table-select').value)];if(!table)return '';
+ const articleExercises=articoliDeterminativiExercises(table);
+ if(articleExercises)return articleExercises[index]?.plural||'';
  const target=Number($('grammar-column-select').value);
  return String(table.rows[(table.header?1:0)+index]?.[target]||'');
 }
